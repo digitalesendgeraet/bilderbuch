@@ -25,15 +25,16 @@ class Network:
         data_i = PL.Image.open(file)
         self.hidden_layer = np.array(data_i)
 
-    def next_layer(self, prev_Layer, cur_Layer, weights):
-        for n in range(len(cur_Layer)):
-            for m in range(len(cur_Layer[0])):
+    def next_layer(self, prev_Layer, cur_Layer):
+        for n in range(len(cur_Layer.values)):
+            for m in range(len(cur_Layer.values[n])):
                 sum = 0
-                for i in range(len(weights[n])):
-                    for j in range(len(weights[n,0])):
-                        sum += prev_Layer[i,j]*weights[n,i,j]
+                for i in range(len(cur_Layer.weights[n])):
+                    for j in range(len(cur_Layer.weights[n,m])):
+                        sum += prev_Layer.values[i,j]*cur_Layer.weights[n,m,i,j]
                 sum += cur_Layer.bias[n, m]
-                cur_Layer[n,m] = sigmoid(sum)
+                cur_Layer.z[n,m] = sum
+                cur_Layer.values[n,m] = sigmoid(sum)
 
         return cur_Layer
 
