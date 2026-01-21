@@ -12,6 +12,18 @@ class Layer:
         self.bias = np.array([None])
         self.values = np.array([None])
 
+    def next_layer(self, prev_Layer):
+        for n in range(len(self.values)):
+            for m in range(len(self.values[n])):
+                sum = 0
+                for i in range(len(self.weights[n])):
+                    for j in range(len(self.weights[n,m])):
+                        sum += prev_Layer.values[i,j]*self.weights[n,m,i,j]
+                sum += self.bias[n, m]
+                self.z[n,m] = sum
+                self.values[n,m] = sigmoid(sum)
+
+
 class Network:
 
     def __init__(self):
@@ -24,19 +36,7 @@ class Network:
     def r_file(self,file):
         data_i = PL.Image.open(file)
         self.hidden_layer = np.array(data_i)
-
-    def next_layer(self, prev_Layer, cur_Layer):
-        for n in range(len(cur_Layer.values)):
-            for m in range(len(cur_Layer.values[n])):
-                sum = 0
-                for i in range(len(cur_Layer.weights[n])):
-                    for j in range(len(cur_Layer.weights[n,m])):
-                        sum += prev_Layer.values[i,j]*cur_Layer.weights[n,m,i,j]
-                sum += cur_Layer.bias[n, m]
-                cur_Layer.z[n,m] = sum
-                cur_Layer.values[n,m] = sigmoid(sum)
-
-        return cur_Layer
+       
 
     def run(self, file):
         self.r_file(file)
