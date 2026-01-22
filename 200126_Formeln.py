@@ -9,17 +9,18 @@ def sigmoid(x):
 class Layer:
 
     def __init__(self):
-        self.bias = np.array([None])
-        self.values = np.array([None])
+        self.bias = np.array([None])                        # corosponds to b
+        self.values = np.array([None])                      # corosponds to a
+        self.weights = np.array([None])                     # corosponds to w
+        self.z= np.array([None])                            # corosponds to z
+        self.goal = np.array([None])                        # corosponds to y
 
 class Network:
 
     def __init__(self):
-        self.input_layer =  np.array([None])   
-        self.hidden_layer = np.array([None])
-        self.output_layer = np.array([[None],[None]]) # 0-index = True ; 1-index = Flase
-        self.edge_weight_i = np.array([None])
-        self.edge_weight_o = np.array([None])
+        self.input_layer =  Layer()
+        self.hidden_layer = Layer()
+        self.output_layer = Layer()                          # 0-index = True ; 1-index = Flase
 
     def r_file(self,file):
         data_i = PL.Image.open(file)
@@ -44,6 +45,5 @@ class Network:
         trueVal = self.output_layer[0,0]
         falseVal = self.output_layer[1,0]
         return trueVal, falseVal
-
     
-        
+    def wieght_sensitivity(self):
