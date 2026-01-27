@@ -3,10 +3,10 @@ import PIL as PL
 import math
 
 def sigmoid(x):
-    return(1/(1+math.e**(-x)))
+    return (1/(1+math.e**(-x)))
 
 def derev_sigmoid(x):
-    math.e**(-x)/(1+math.e**(-x)+math.e**(-2*x))
+    return (math.e**(-x)/(1+math.e**(-x)+math.e**(-2*x)))
 
 
 
@@ -22,7 +22,7 @@ class Layer:
         self.values = np.array(values)                      # corosponds to a
 
         values_sens = [[None for x in range(size)] for x in range(size)] 
-        value_sensitivity = np.array(values_sens)
+        self.value_sensitivity = np.array(values_sens)
 
         weights = [[[[None for x in range(prev_Size)] for x in range(prev_Size)] for x in range(size)] for x in range(size)]
         self.weights = np.array(weights)                     # corosponds to w -> von vorheriger zu dieser layer
@@ -40,8 +40,8 @@ class Layer:
         for n in range(len(self.values)):
             for m in range(len(self.values[n])):
                 sum = 0
-                for i in range(len(prev_Layer)):
-                    for j in range(len(prev_Layer[i])):
+                for i in range(len(prev_Layer.values)):
+                    for j in range(len(prev_Layer.values[i])):
                         sum += prev_Layer.values[i,j]*self.weights[n,m,i,j]
                 sum += self.bias[n, m]
                 self.z[n,m] = sum
@@ -87,20 +87,37 @@ class Layer:
 class Network:
 
     def __init__(self):
-        self.input_layer =  Layer()
-        self.hidden_layer = Layer()
-        self.output_layer = Layer()                          # 0-index = True ; 1-index = Flase
+        self.input_layer =  Layer(64, 1)
+        self.output_layer = Layer(1, 64)                          # 0-index = True ; 1-index = Flase
 
-    def r_file(self,file):
+    def img_open(self, file):
         data_i = PL.Image.open(file)
-        self.hidden_layer = np.array(data_i)
+        self.input_layer.values = np.array(data_i)
 
-    def run(self, file):
-        self.r_file(file)
-        self.hidden_layer = self.next_layer(self,self.input_layer, self.hidden_layer, self.edge_weight_i)
-        self.output_layer = self.next_layer(self,self.hidden_layer, self.output_layer, self.edge_weight_o)
-        trueVal = self.output_layer[0,0]
-        falseVal = self.output_layer[1,0]
-        return trueVal, falseVal
+    def r_file(self, file, layer):
+        layer = np.array(data_i)
+
+    def run(self):
+        #self.img_open(file)
+        #self.r_file(file, self.output_layer.weights)
+        #self.r_file(file, self.output_layer.bias)
+
+        self.input_layer.values = np.array([[1,1,1], [1,1,1], [1,1,1]])
+        
+
+
+        self.output_layer.next_layer(self.input_layer)
+        trueVal = self.output_layer.values
+        return trueVal
     
+
+    def learning(self):
+        self.output_layer.bias = np.array([[-8]])
+        self.output_layer.weights = np.array([[[[0,0,2], [1,0,2], [0,1,0.2]]]])
+        self.output_layer.goal = np.array([[0]])
+        self.run()
+
     
+
+n = Network()
+print(n.run())
