@@ -6,7 +6,7 @@ def sigmoid(x):
     return (1/(1+math.e**(-x)))
 
 def derev_sigmoid(x):
-    return (math.e**(-x)/(1+math.e**(-x)+math.e**(-2*x)))
+    return (- math.e**(-x)/(1+math.e**(-x)+math.e**(-2*x)))
 
 
 
@@ -48,15 +48,15 @@ class Layer:
                 self.values[n,m] = sigmoid(sum)
     
     def weight_sensitivity(self, prev_Layer): #prev_Layer ist layer davor (nichts umgedreht durch backpropagation)
-        for n in range(len(self.values)):
-            for m in range(len(self.values[n])):
-                for i in range(len(self.weights[n,m])):
-                    for j in range(len(self.weights[n,m,i])):
-                        dz_nach_dw = prev_Layer.values[n,m]
-                        da_nach_dz = derev_sigmoid(self.z[n,m])
-                        dc_nach_da = 2 * (self.values[n,m]-self.goal[n,m])
+        for n in range(len(prev_Layer.values)):
+            for m in range(len(prev_Layer.values[n])):
+                for i in range(len(self.values)):
+                    for j in range(len(self.values[i])):
+                        dz_nach_dw = prev_Layer.values[n,m] 
+                        da_nach_dz = derev_sigmoid(self.z[i, j])
+                        dc_nach_da = 2 * (self.values[i, j]-self.goal[i, j])
                         dc_nach_dw = dz_nach_dw * da_nach_dz * dc_nach_da
-                        self.weights_sensitivity[n,m,i,j] =  dc_nach_dw
+                        self.weights_sensitivity[i, j, n, m] =  dc_nach_dw
     
     def bias_sensitivity(self):
         for n in range(len(self.values)):
@@ -65,7 +65,7 @@ class Layer:
                 da_nach_dz = derev_sigmoid(self.z[n,m])
                 dc_nach_da = 2 * (self.values[n,m]-self.goal[n,m])
                 dc_nach_db = dz_nach_db * da_nach_dz * dc_nach_da
-                self.weights_sensitivity[n,m] =  dc_nach_db
+                self.biases_sensitivity[n,m] =  dc_nach_db
 
     def prev_Val_sensitivity(self, prev_Layer):
         for n in range(len(prev_Layer.values)):
@@ -87,8 +87,10 @@ class Layer:
 class Network:
 
     def __init__(self):
-        self.input_layer =  Layer(64, 1)
-        self.output_layer = Layer(1, 64)                          # 0-index = True ; 1-index = Flase
+        self.input_layer =  Layer(3, 1)
+        self.hidden_layer = Layer(2, 3)
+        self.output_layer = Layer(1, 2)                          # 0-index = True ; 1-index = Flase
+        self.learning_rate = 0.5
 
     def img_open(self, file):
         data_i = PL.Image.open(file)
@@ -102,22 +104,47 @@ class Network:
         #self.r_file(file, self.output_layer.weights)
         #self.r_file(file, self.output_layer.bias)
 
-        self.input_layer.values = np.array([[1,1,1], [1,1,1], [1,1,1]])
+
+
+        
         
 
+        self.hidden_layer.next_layer(self.input_layer)
+        self.output_layer.next_layer(self.hidden_layer)
 
-        self.output_layer.next_layer(self.input_layer)
+
+
         trueVal = self.output_layer.values
         return trueVal
     
 
     def learning(self):
         self.output_layer.bias = np.array([[-8]])
-        self.output_layer.weights = np.array([[[[0,0,2], [1,0,2], [0,1,0.2]]]])
+        self.output_layer.weights = np.array([[[[0,1], [0,2]]]])
+
+        self.hidden_layer.bias = np.array([[-8, 2], [-4, 6]])
+        self.hidden_layer.weights = np.array([[[[0,1,5], [0,2,1], [2,0,1]], [[0,1,5], [0,2,1], [2,0,1]]], [[[0,1,5], [0,2,1], [2,0,1]], [[0,1,5], [0,2,1], [2,0,1]]]])
+
+        self.input_layer.values = np.array([[0,0,0], [1,1,1], [1,1,1]])
+
         self.output_layer.goal = np.array([[0]])
+
+
+
         self.run()
+
+        self.output_layer.bias_sensitivity()
+
+        self.output_layer.weight_sensitivity(self.hidden_layer)
+
+        self.output_layer.prev_Val_sensitivity(self.hidden_layer)
+
+        print(self.output_layer.biases_sensitivity)
+        print(self.output_layer.weights_sensitivity)
+        print(self.hidden_layer.value_sensitivity)
 
     
 
 n = Network()
-print(n.run())
+n.learning()
+    
