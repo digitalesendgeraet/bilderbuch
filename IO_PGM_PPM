@@ -1,0 +1,212 @@
+class IO_PGM_PPM:
+    """
+    Ein Modul zur Bearbeitung von ppm- und pgm-Bildern.
+    Datenfelder:
+    self.punktliste
+    self.breite, self.hoehe
+    self.kennung
+    self.farbtiefe
+    self.ascii
+    self.grau
+    self.bild Zeichenkette der Farbwerte aus der Datei
+    """
+        
+    def lesen (self,datei):
+        """
+        Vor.: Der Bearbeiter ist initialisiert, datei ist der Name
+              einer pgm-Datei im aktuellen Verzeichnis
+        Erg.: Die Daten der Datei sind in den entsprechenden Attributen
+              aufgehoben.
+              Dabei ist self.punktliste eine Liste aus self.hoehe*self.breite
+              Elementen, jedes Element ist eine Zahl bei Graubildern oder
+              eine Liste aus 3 Zahlen für die rgb-Werte bei Farbbildern.
+        """
+        self.datei         = datei
+        self.punktliste  = [] 
+        self.__inhalt_lesen()
+        self.__bestimme_typ()
+        self.__punktliste_bauen()
+      
+    def __inhalt_lesen(self):
+        """
+        Vor.: keine
+        Erg.: der Dateiinhalt ist analysiert und in den Datenfeldern
+              sind die einzelnen Bestandteile des Bildes aufgehoben
+        """
+        f = open(self.datei,"r",encoding="latin1")
+        self.ein=f.read()
+        [erstes,zweites]= self.ein.split('\n',1)
+        self.kennung = erstes.strip()
+        self.kommentar = ''
+        while zweites[0]=='#':            
+            [erstes,zweites]= zweites.split('\n',1)
+            self.kommentar+= erstes.strip()
+        [gr,drittes]=zweites.split('\n',1)
+        # nach der Farbtiefe kann auch ein Leerzeichen kommen
+        farbtiefe=''
+        for ze in drittes:
+            if ze.isdigit():
+                farbtiefe+=ze
+            else:
+                break
+        ft=int(farbtiefe)
+        anz=len(farbtiefe)
+        bild=drittes[1+anz:]
+        #print([gr,ft,bild])
+        #print(len(bild))
+        #print(bild[0:10])
+        #print(bild[-10:])
+        gr=gr.split()
+        self.breite = int(gr[0])
+        self.hoehe  = int(gr[1])
+        self.farbtiefe= ft
+        #print(self.breite, self.hoehe, self.farbtiefe)
+        self.bild=bild
+
+    def __bestimme_typ(self):
+        """
+        Vor.: keine
+        Erg.: die Parameter self.grau und self.ascii sind belegt
+        """
+        self.grau = False
+        self.ascii = False      
+            
+        if self.kennung =='P2':
+            self.ascii = True
+            self.grau = True
+        elif self.kennung == "P3":
+            self.ascii = True
+        elif self.kennung == "P5":
+            self.grau = True
+        
+    def __punktliste_bauen(self):
+        """
+        Vor.: keine
+        Erg.: die 
+        """
+        if self.ascii:
+            bild=self.bild.split()
+            funktion=int
+        else:
+            bild=self.bild
+            funktion=ord
+        if self.grau:
+            for punkt in bild:
+                self.punktliste.append(funktion(punkt))
+        else:
+            for i in range(0,self.breite*self.hoehe*3,3):
+                r = funktion(bild[i])
+                g = funktion(bild[i+1])
+                b = funktion(bild[i+2])
+                #print(i,r,g,b)
+                self.punktliste.append([r,g,b])
+                        
+    def __kopf_ausgabe(self):
+        """
+        Vor.:
+        Erg.:
+        """
+        aus=self.kennung+'\n'
+        aus+=self.kommentar+'\n'
+        aus+=str(self.breite)+' '+str(self.hoehe)+'\n'
+        aus+=str(self.farbtiefe)+'\n'
+        self.aus_kopf=aus
+                
+    def __ascii_bild_bauen(self):
+        """
+        Vor.: ein Bild ist eingelesen
+        Erg.:geliefert sind die Bilddaten ASCII-kodiert
+        """
+        bild=''
+        if self.grau:
+            for ze in self.punktliste:
+                bild = bild + str(ze)+' '
+        else:
+            for punkt in self.punktliste:
+                for wert in punkt:
+                    bild=bild+str(wert)+' '
+        self.__kopf_ausgabe()
+        bild=self.aus_kopf+bild
+        return bild
+        
+    def dat_schreiben(self,datei):
+        """
+        Vor.: datei ist ein gültiger Dateiname, binaer gibt die Art der
+              Kodierung in der Zieldatei an: True für binär, False für ascii
+        Erg.: Die Bilddatei ist im angegebenen Pfad geschrieben
+        """
+        suffix = ""
+        if self.grau and self.ascii:
+            self.kennung='P2'
+            suffix = ".pgm"
+        elif self.grau and not self.ascii:
+            self.kennung='P5'
+            suffix = ".pgm"
+        elif not self.grau and self.ascii:
+            self.kennung='P3'
+            suffix = ".ppm"
+        else:
+            self.kennung='P6'
+            suffix = ".ppm"
+
+        self.__kopf_ausgabe()
+        
+        if not self.ascii:
+            bild = self.__bin_bild_bauen()
+        else:
+            bild=self.__ascii_bild_bauen()
+        # in die Datei
+        f=open(datei+suffix,"w",encoding="latin1")
+        f.write(bild)
+        f.close()
+        
+    def __bin_bild_bauen(self):
+        """
+        Vor.: ein Bild ist eingelesen
+        Erg.: geliefert sind die Bilddaten binär kodiert
+        """
+        bild=''
+        for i in self.punktliste:
+            if self.grau:
+                # testen ob doppeltes Zeichen chr(10), dann austauschen
+                if i==10:    bild+=chr(11)
+                else:        bild+=chr(i)
+            else:
+                for k in range(3):
+                    if i[k]==10:  i[k]=11                    
+                bild=bild+chr(i[0])+chr(i[1])+chr(i[2])
+        bild=self.aus_kopf+bild
+        return bild
+        
+        
+    def zeige_bild(self):
+        print ('Kennung',self.kennung)
+        print ('Kommentar',self.kommentar)
+        print ('Br, Hoe',self.breite,self.hoehe)
+        print ('Farbtiefe',self.farbtiefe)
+        print (self.punktliste)
+ 
+    def test_bild( self):
+        bild = 'P3\n#test\n16 16\n255\n'
+        rot = '255 0 0 '
+        
+        bild = bild + (16*16)*rot
+        
+        f = open( "rot_ascii_16.ppm","w")
+        f.write( bild)
+        f.close()
+
+    def test_bild2(self):
+        kopf='P3\n#test\n50 50\n255\n'
+        kopf2='P6\n#test\n50 50\n255\n'
+        for y in range(50):
+            for x in range(50):
+                kopf2+=chr((x+y*16)%256)+chr((x-y*16)%256)+chr((x*y*16)%256)
+                kopf+=str((x+y*16)%256)+' '+str((x-y*16)%256)+' ' +str((x*y*16)%256)+' '
+            kopf+='\n'
+        f=open("test2.ppm","w")
+        f.write(kopf[:-1])
+        f.close()
+        f=open("test2_b.ppm","w",encoding="utf8")
+        f.write(kopf2)
+        f.close()
