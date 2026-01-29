@@ -1,0 +1,20 @@
+from IO_PGM_PPM import *
+import numpy as np
+
+
+bild_io = IO_PGM_PPM()
+bild_io.lesen("house.pgm")
+
+
+print("Breite:", bild_io.breite)
+print("Höhe:", bild_io.hoehe)
+print("Farbtiefe:", bild_io.farbtiefe)
+print("Pixelwerte (punktliste):")
+print(bild_io.punktliste) 
+
+def erzeuge_matrix(b, h):
+    punktliste_array = np.array(bild_io.punktliste) 
+    matrix = punktliste_array.reshape(h, b)         
+    return matrix
+print (erzeuge_matrix(bild_io.breite, bild_io.hoehe))
+
