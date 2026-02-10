@@ -8,6 +8,15 @@ def sigmoid(x):
 def derev_sigmoid(x):
     return (- math.e**(-x)/(1+math.e**(-x)+math.e**(-2*x)))
 
+def r_file(file):
+    with open(file, "r") as f:
+        data = f.read()
+    return np.array(data)
+    
+def w_file(file, data):
+    with open(file, "w") as f:
+        f.write(data)
+
 
 
 class Layer:
@@ -47,23 +56,29 @@ class Layer:
                 self.z[n,m] = sum
                 self.values[n,m] = sigmoid(sum)
     
-    def weight_sensitivity(self, prev_Layer): #prev_Layer ist layer davor (nichts umgedreht durch backpropagation)
+    def weight_sensitivity(self, prev_Layer, use_value_sensitivity=False): #prev_Layer ist layer davor (nichts umgedreht durch backpropagation)
         for n in range(len(prev_Layer.values)):
             for m in range(len(prev_Layer.values[n])):
                 for i in range(len(self.values)):
                     for j in range(len(self.values[i])):
                         dz_nach_dw = prev_Layer.values[n,m] 
                         da_nach_dz = derev_sigmoid(self.z[i, j])
-                        dc_nach_da = 2 * (self.values[i, j]-self.goal[i, j])
+                        if use_value_sensitivity:
+                            dc_nach_da = self.value_sensitivity[i,j]
+                        else:
+                            dc_nach_da = 2 * (self.values[i, j]-self.goal[i, j])
                         dc_nach_dw = dz_nach_dw * da_nach_dz * dc_nach_da
                         self.weights_sensitivity[i, j, n, m] =  dc_nach_dw
     
-    def bias_sensitivity(self):
+    def bias_sensitivity(self, use_value_sensitivity=False):
         for n in range(len(self.values)):
             for m in range(len(self.values[n])):
                 dz_nach_db = 1
                 da_nach_dz = derev_sigmoid(self.z[n,m])
-                dc_nach_da = 2 * (self.values[n,m]-self.goal[n,m])
+                if use_value_sensitivity:
+                    dc_nach_da = self.value_sensitivity[n,m]
+                else:
+                    dc_nach_da = 2 * (self.values[n,m]-self.goal[n,m])
                 dc_nach_db = dz_nach_db * da_nach_dz * dc_nach_da
                 self.biases_sensitivity[n,m] =  dc_nach_db
 
@@ -96,23 +111,27 @@ class Network:
         data_i = PL.Image.open(file)
         self.input_layer.values = np.array(data_i)
 
-    def r_file(self, file, layer):
-        layer = np.array(data_i)
+
+    def read_all(self):
+        self.output_layer.bias = r_file("output_bias.txt")
+        self.output_layer.weights = r_file("output_weights.txt")
+
+        self.hidden_layer.bias = r_file("hidden_bias.txt")
+        self.hidden_layer.weights = r_file("hidden_weights.txt")
+
+
+    def write_all(self):
+        w_file("output_bias.txt", self.output_layer.bias)
+        w_file("output_weights.txt", self.output_layer.weights)
+
+        w_file("hidden_bias.txt", self.hidden_layer.bias)
+        w_file("hidden_weights.txt", self.hidden_layer.weights)
+
 
     def run(self):
-        #self.img_open(file)
-        #self.r_file(file, self.output_layer.weights)
-        #self.r_file(file, self.output_layer.bias)
-
-
-
-        
-        
 
         self.hidden_layer.next_layer(self.input_layer)
         self.output_layer.next_layer(self.hidden_layer)
-
-
 
         trueVal = self.output_layer.values
         return trueVal
@@ -127,23 +146,28 @@ class Network:
 
         self.input_layer.values = np.array([[0,0,0], [1,1,1], [1,1,1]])
 
-        self.output_layer.goal = np.array([[0]])
+        self.output_layer.goal = np.array([[1]])
 
 
 
         self.run()
 
         self.output_layer.bias_sensitivity()
-
         self.output_layer.weight_sensitivity(self.hidden_layer)
-
         self.output_layer.prev_Val_sensitivity(self.hidden_layer)
 
-        print(self.output_layer.biases_sensitivity)
-        print(self.output_layer.weights_sensitivity)
-        print(self.hidden_layer.value_sensitivity)
+        self.hidden_layer.bias_sensitivity(use_value_sensitivity=True)
+        self.hidden_layer.weight_sensitivity(self.input_layer, use_value_sensitivity=True)
 
-    
+        self.hidden_layer.weights = self.hidden_layer.weights - self.learning_rate * self.hidden_layer.weights_sensitivity
+        self.hidden_layer.bias = self.hidden_layer.bias - self.learning_rate * self.hidden_layer.biases_sensitivity
+
+        self.output_layer.weights = self.output_layer.weights - self.learning_rate * self.output_layer.weights_sensitivity
+        self.output_layer.bias = self.output_layer.bias - self.learning_rate * self.output_layer.biases_sensitivity
+
+        self.write_all()
+
+
 
 n = Network()
 n.learning()
