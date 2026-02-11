@@ -1,6 +1,9 @@
 import numpy as np
-import PIL as PL
+from PIL import Image
 import math
+import random
+import json
+import os
 
 def sigmoid(x):
     return (1/(1+math.e**(-x)))
@@ -44,6 +47,9 @@ class Layer:
 
         goal = z = [[None for x in range(size)] for x in range(size)] 
         self.goal = np.array(goal)                        # corosponds to y
+
+        self.size = size
+        self.prev_Size = prev_Size
 
     def next_layer(self, prev_Layer):
         for n in range(len(self.values)):
@@ -102,33 +108,57 @@ class Layer:
 class Network:
 
     def __init__(self):
-        self.input_layer =  Layer(3, 1)
-        self.hidden_layer = Layer(2, 3)
-        self.output_layer = Layer(1, 2)                          # 0-index = True ; 1-index = Flase
+        self.input_layer =  Layer(16, 1)
+        self.hidden_layer = Layer(10, 16)
+        self.output_layer = Layer(1, 10)                          # 0-index = True ; 1-index = Flase
         self.learning_rate = 0.5
 
+
+
+    def generate_random(self):
+        bias = [[round(random.uniform(-1,1), 3) for x in range(self.hidden_layer.size)] for x in range(self.hidden_layer.size)] 
+        self.hidden_layer.bias = np.array(bias)  
+
+        weights = [[[[round(random.uniform(-1,1), 3)  for x in range(self.hidden_layer.prev_Size)] for x in range(self.hidden_layer.prev_Size)] for x in range(self.hidden_layer.size)] for x in range(self.hidden_layer.size)]
+        self.hidden_layer.weights = np.array(weights)
+
+        bias = [[round(random.uniform(-1,1), 3)  for x in range(self.output_layer.size)] for x in range(self.output_layer.size)] 
+        self.output_layer.bias = np.array(bias)  
+
+        weights = [[[[round(random.uniform(-1,1), 3)  for x in range(self.output_layer.prev_Size)] for x in range(self.output_layer.prev_Size)] for x in range(self.output_layer.size)] for x in range(self.output_layer.size)]
+        self.output_layer.weights = np.array(weights)  
+
+        self.write_all()   
+
+
+
     def img_open(self, file):
-        data_i = PL.Image.open(file)
+        data_i = Image.open(file).convert("L")
         self.input_layer.values = np.array(data_i)
 
 
-    def read_all(self):
-        self.output_layer.bias = r_file("output_bias.txt")
-        self.output_layer.weights = r_file("output_weights.txt")
 
-        self.hidden_layer.bias = r_file("hidden_bias.txt")
-        self.hidden_layer.weights = r_file("hidden_weights.txt")
+    def read_all(self):
+        self.output_layer.bias = np.array(r_file("output_bias.txt"))
+        self.output_layer.weights = np.array(r_file("output_weights.txt"))
+
+        self.hidden_layer.bias = np.array(r_file("hidden_bias.txt"))
+        self.hidden_layer.weights = np.array(r_file("hidden_weights.txt"))
+
 
 
     def write_all(self):
-        w_file("output_bias.txt", self.output_layer.bias)
-        w_file("output_weights.txt", self.output_layer.weights)
+        w_file("output_bias.txt", str(self.output_layer.bias))
+        w_file("output_weights.txt", str(self.output_layer.weights))
 
-        w_file("hidden_bias.txt", self.hidden_layer.bias)
-        w_file("hidden_weights.txt", self.hidden_layer.weights)
+        w_file("hidden_bias.txt", str(self.hidden_layer.bias))
+        w_file("hidden_weights.txt", str(self.hidden_layer.weights))
 
 
-    def run(self):
+
+    def run(self, file):
+
+        self.img_open("images/" + file)
 
         self.hidden_layer.next_layer(self.input_layer)
         self.output_layer.next_layer(self.hidden_layer)
@@ -136,21 +166,20 @@ class Network:
         trueVal = self.output_layer.values
         return trueVal
     
-
-    def learning(self):
-        self.output_layer.bias = np.array([[-8]])
-        self.output_layer.weights = np.array([[[[0,1], [0,2]]]])
-
-        self.hidden_layer.bias = np.array([[-8, 2], [-4, 6]])
-        self.hidden_layer.weights = np.array([[[[0,1,5], [0,2,1], [2,0,1]], [[0,1,5], [0,2,1], [2,0,1]]], [[[0,1,5], [0,2,1], [2,0,1]], [[0,1,5], [0,2,1], [2,0,1]]]])
-
-        self.input_layer.values = np.array([[0,0,0], [1,1,1], [1,1,1]])
-
-        self.output_layer.goal = np.array([[1]])
+    
 
 
+    def learning(self, file):
 
-        self.run()
+        with open('goals.json', 'r') as file:
+            data = json.load(file)
+
+        pictures = data['pictures']
+        goal = pictures[file]["goal"]
+
+        self.output_layer.goal = np.array([[goal]])
+
+        self.run(file)
 
         self.output_layer.bias_sensitivity()
         self.output_layer.weight_sensitivity(self.hidden_layer)
@@ -167,8 +196,33 @@ class Network:
 
         self.write_all()
 
+    
 
+    def full_learning(self):
+        for image in os.listdir("images"):
+            self.learning(image)
 
 n = Network()
-n.learning()
-    
+
+# file = "goals.json"           #das muss in die datei von nelly rein, die die bilder erstellt (automatisches abspeichern des goals in einer json datei)
+
+# print("start")
+# data = {
+#         "pictures": 
+#         {}
+#     }
+
+# json_str = json.dumps(data, indent=4)
+# with open(file, "w") as f:
+#     f.write(json_str)
+
+# file_name = "test_0.png"
+# goal = 1
+# data = {file_name:{"goal": goal}}
+
+# def write_json(data, filename="goals.json"):
+#     with open(filename, 'r+') as file:
+#         file_data = json.load(file)
+#         file_data["pictures"].update(data)
+#         file.seek(0)
+#         json.dump(file_data, file, indent=4)
