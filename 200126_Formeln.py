@@ -6,47 +6,31 @@ import json
 import os
 
 def sigmoid(x):
-    return (1/(1+math.e**(-x)))
+    if x >= 0:
+        z = math.exp(-x)
+        return 1 / (1 + z)
+    else:
+        z = math.exp(x)
+        return z / (1 + z)
 
 def derev_sigmoid(x):
-    return (- math.e**(-x)/(1+math.e**(-x)+math.e**(-2*x)))
-
-def r_file(file):
-    with open(file, "r") as f:
-        data = f.read()
-    return np.array(data)
-    
-def w_file(file, data):
-    with open(file, "w") as f:
-        f.write(data)
+    s = sigmoid(x)
+    return s * (1 - s)
 
 
 
 class Layer:
     def __init__(self, size, prev_Size):
-        bias = [[None for x in range(size)] for x in range(size)] 
-        self.bias = np.array(bias)                        # corosponds to b
+        self.bias = np.zeros((size, size))
+        self.biases_sensitivity = np.zeros((size, size))
+        self.values = np.zeros((size, size))
+        self.value_sensitivity = np.zeros((size, size))
 
-        bias_sens = [[None for x in range(size)] for x in range(size)] 
-        self.biases_sensitivity = np.array(bias_sens) 
+        self.weights = np.zeros((size, size, prev_Size, prev_Size))
+        self.weights_sensitivity = np.zeros((size, size, prev_Size, prev_Size))
 
-        values = [[None for x in range(size)] for x in range(size)] 
-        self.values = np.array(values)                      # corosponds to a
-
-        values_sens = [[None for x in range(size)] for x in range(size)] 
-        self.value_sensitivity = np.array(values_sens)
-
-        weights = [[[[None for x in range(prev_Size)] for x in range(prev_Size)] for x in range(size)] for x in range(size)]
-        self.weights = np.array(weights)                     # corosponds to w -> von vorheriger zu dieser layer
-
-        weights_sens = [[[[None for x in range(prev_Size)] for x in range(prev_Size)] for x in range(size)] for x in range(size)]
-        self.weights_sensitivity = np.array(weights_sens) 
-
-        z = [[None for x in range(size)] for x in range(size)] 
-        self.z= np.array(z)                            # corosponds to z
-
-        goal = z = [[None for x in range(size)] for x in range(size)] 
-        self.goal = np.array(goal)                        # corosponds to y
+        self.z = np.zeros((size, size))
+        self.goal = np.zeros((size, size))
 
         self.size = size
         self.prev_Size = prev_Size
@@ -109,23 +93,23 @@ class Network:
 
     def __init__(self):
         self.input_layer =  Layer(16, 1)
-        self.hidden_layer = Layer(10, 16)
-        self.output_layer = Layer(1, 10)                          # 0-index = True ; 1-index = Flase
-        self.learning_rate = 0.5
+        self.hidden_layer = Layer(5, 16)
+        self.output_layer = Layer(1, 5)                          # 0-index = True ; 1-index = Flase
+        self.learning_rate = 0.01
 
 
 
     def generate_random(self):
-        bias = [[round(random.uniform(-1,1), 3) for x in range(self.hidden_layer.size)] for x in range(self.hidden_layer.size)] 
+        bias = [[round(random.uniform(-0.1,0.1), 3) for x in range(self.hidden_layer.size)] for x in range(self.hidden_layer.size)] 
         self.hidden_layer.bias = np.array(bias)  
 
-        weights = [[[[round(random.uniform(-1,1), 3)  for x in range(self.hidden_layer.prev_Size)] for x in range(self.hidden_layer.prev_Size)] for x in range(self.hidden_layer.size)] for x in range(self.hidden_layer.size)]
+        weights = [[[[round(random.uniform(-0.1,0.1), 3)  for x in range(self.hidden_layer.prev_Size)] for x in range(self.hidden_layer.prev_Size)] for x in range(self.hidden_layer.size)] for x in range(self.hidden_layer.size)]
         self.hidden_layer.weights = np.array(weights)
 
-        bias = [[round(random.uniform(-1,1), 3)  for x in range(self.output_layer.size)] for x in range(self.output_layer.size)] 
+        bias = [[round(random.uniform(-0.1,0.1), 3)  for x in range(self.output_layer.size)] for x in range(self.output_layer.size)] 
         self.output_layer.bias = np.array(bias)  
 
-        weights = [[[[round(random.uniform(-1,1), 3)  for x in range(self.output_layer.prev_Size)] for x in range(self.output_layer.prev_Size)] for x in range(self.output_layer.size)] for x in range(self.output_layer.size)]
+        weights = [[[[round(random.uniform(-0.1,0.1), 3)  for x in range(self.output_layer.prev_Size)] for x in range(self.output_layer.prev_Size)] for x in range(self.output_layer.size)] for x in range(self.output_layer.size)]
         self.output_layer.weights = np.array(weights)  
 
         self.write_all()   
@@ -134,45 +118,54 @@ class Network:
 
     def img_open(self, file):
         data_i = Image.open(file).convert("L")
-        self.input_layer.values = np.array(data_i)
+        self.input_layer.values = np.array(data_i) / 255.0
 
 
 
     def read_all(self):
-        self.output_layer.bias = np.array(r_file("output_bias.txt"))
-        self.output_layer.weights = np.array(r_file("output_weights.txt"))
+        self.output_layer.bias = np.load("output_bias.npy")
+        self.output_layer.weights = np.load("output_weights.npy")
 
-        self.hidden_layer.bias = np.array(r_file("hidden_bias.txt"))
-        self.hidden_layer.weights = np.array(r_file("hidden_weights.txt"))
+        self.hidden_layer.bias = np.load("hidden_bias.npy")
+        self.hidden_layer.weights = np.load("hidden_weights.npy")
+
 
 
 
     def write_all(self):
-        w_file("output_bias.txt", str(self.output_layer.bias))
-        w_file("output_weights.txt", str(self.output_layer.weights))
+        np.save("output_bias.npy", self.output_layer.bias)
+        np.save("output_weights.npy", self.output_layer.weights)
 
-        w_file("hidden_bias.txt", str(self.hidden_layer.bias))
-        w_file("hidden_weights.txt", str(self.hidden_layer.weights))
+        np.save("hidden_bias.npy", self.hidden_layer.bias)
+        np.save("hidden_weights.npy", self.hidden_layer.weights)
 
 
 
     def run(self, file):
+        self.read_all()
 
-        self.img_open("images/" + file)
+        self.img_open("test_images/" + file)
 
         self.hidden_layer.next_layer(self.input_layer)
         self.output_layer.next_layer(self.hidden_layer)
 
-        trueVal = self.output_layer.values
-        return trueVal
+        return self.output_layer.values
     
     
 
 
     def learning(self, file):
+        self.hidden_layer.weights_sensitivity.fill(0)
+        self.hidden_layer.biases_sensitivity.fill(0)
+        self.hidden_layer.value_sensitivity.fill(0)
 
-        with open('goals.json', 'r') as file:
-            data = json.load(file)
+        self.output_layer.weights_sensitivity.fill(0)
+        self.output_layer.biases_sensitivity.fill(0)
+        self.output_layer.value_sensitivity.fill(0)
+
+
+        with open('goals.json', 'r') as goals:
+            data = json.load(goals)
 
         pictures = data['pictures']
         goal = pictures[file]["goal"]
@@ -180,6 +173,7 @@ class Network:
         self.output_layer.goal = np.array([[goal]])
 
         self.run(file)
+        print(self.output_layer.goal[0,0] - self.output_layer.values[0,0])
 
         self.output_layer.bias_sensitivity()
         self.output_layer.weight_sensitivity(self.hidden_layer)
@@ -199,30 +193,10 @@ class Network:
     
 
     def full_learning(self):
-        for image in os.listdir("images"):
+        for image in os.listdir("test_images"):
             self.learning(image)
 
 n = Network()
-
-# file = "goals.json"           #das muss in die datei von nelly rein, die die bilder erstellt (automatisches abspeichern des goals in einer json datei)
-
-# print("start")
-# data = {
-#         "pictures": 
-#         {}
-#     }
-
-# json_str = json.dumps(data, indent=4)
-# with open(file, "w") as f:
-#     f.write(json_str)
-
-# file_name = "test_0.png"
-# goal = 1
-# data = {file_name:{"goal": goal}}
-
-# def write_json(data, filename="goals.json"):
-#     with open(filename, 'r+') as file:
-#         file_data = json.load(file)
-#         file_data["pictures"].update(data)
-#         file.seek(0)
-#         json.dump(file_data, file, indent=4)
+#print(n.run("test_499.png"))
+n.generate_random()
+#n.full_learning()
