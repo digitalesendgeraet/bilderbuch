@@ -12,10 +12,17 @@ def sigmoid(x):
     else:
         z = math.exp(x)
         return z / (1 + z)
-
+    
 def derev_sigmoid(x):
     s = sigmoid(x)
     return s * (1 - s)
+    
+def relu(x):
+    return x if x > 0 else 0.01 * x
+
+def derev_relu(x):
+    return 1 if x > 0 else 0.01
+
 
 
 
@@ -44,7 +51,10 @@ class Layer:
                         sum += prev_Layer.values[i,j]*self.weights[n,m,i,j]
                 sum += self.bias[n, m]
                 self.z[n,m] = sum
-                self.values[n,m] = sigmoid(sum)
+                if self.size == 1:   # Output layer
+                    self.values[n,m] = sigmoid(sum)
+                else:
+                    self.values[n,m] = relu(sum)
     
     def weight_sensitivity(self, prev_Layer, use_value_sensitivity=False): #prev_Layer ist layer davor (nichts umgedreht durch backpropagation)
         for n in range(len(prev_Layer.values)):
@@ -52,11 +62,18 @@ class Layer:
                 for i in range(len(self.values)):
                     for j in range(len(self.values[i])):
                         dz_nach_dw = prev_Layer.values[n,m] 
-                        da_nach_dz = derev_sigmoid(self.z[i, j])
+
+                        if self.size == 1:
+                            #da_nach_dz = derev_sigmoid(self.z[i,j])
+                            da_nach_dz = 0.5
+                        else:
+                            da_nach_dz = derev_relu(self.z[i,j])
+
                         if use_value_sensitivity:
                             dc_nach_da = self.value_sensitivity[i,j]
                         else:
                             dc_nach_da = 2 * (self.values[i, j]-self.goal[i, j])
+
                         dc_nach_dw = dz_nach_dw * da_nach_dz * dc_nach_da
                         self.weights_sensitivity[i, j, n, m] =  dc_nach_dw
     
@@ -64,23 +81,40 @@ class Layer:
         for n in range(len(self.values)):
             for m in range(len(self.values[n])):
                 dz_nach_db = 1
-                da_nach_dz = derev_sigmoid(self.z[n,m])
+
+                if self.size == 1:
+                    #da_nach_dz = derev_sigmoid(self.z[n, m])
+                    da_nach_dz = 0.5
+                else:
+                    da_nach_dz = derev_relu(self.z[n, m])
+
                 if use_value_sensitivity:
                     dc_nach_da = self.value_sensitivity[n,m]
                 else:
                     dc_nach_da = 2 * (self.values[n,m]-self.goal[n,m])
+
                 dc_nach_db = dz_nach_db * da_nach_dz * dc_nach_da
                 self.biases_sensitivity[n,m] =  dc_nach_db
 
-    def prev_Val_sensitivity(self, prev_Layer):
+    def prev_Val_sensitivity(self, prev_Layer, use_value_sensitivity=False):
         for n in range(len(prev_Layer.values)):
             for m in range(len(prev_Layer.values[n])):
                 summe = 0
                 for i in range(len(self.values)):
                     for j in range(len(self.values[i])):
                         dz_nach_da = self.weights[i,j,n,m]
-                        da_nach_dz = derev_sigmoid(self.z[i,j])
-                        dc_nach_da = 2 * (self.values[i,j]-self.goal[i,j])
+
+                        if self.size == 1:
+                            #da_nach_dz = derev_sigmoid(self.z[i,j])
+                            da_nach_dz = 0.5
+                        else:
+                            da_nach_dz = derev_relu(self.z[i,j])
+
+                        if use_value_sensitivity:
+                            dc_nach_da = self.value_sensitivity[i,j]
+                        else:
+                            dc_nach_da = 2 * (self.values[i,j]-self.goal[i,j])
+
                         summe += dz_nach_da * da_nach_dz * dc_nach_da
                 dc_nach_dw = summe
                 prev_Layer.value_sensitivity[n,m] =  dc_nach_dw
@@ -93,8 +127,8 @@ class Network:
 
     def __init__(self):
         self.input_layer =  Layer(16, 1)
-        self.hidden_layer = Layer(5, 16)
-        self.output_layer = Layer(1, 5)                          # 0-index = True ; 1-index = Flase
+        self.hidden_layer = Layer(4, 16)
+        self.output_layer = Layer(1, 4)                          # 0-index = True ; 1-index = Flase
         self.learning_rate = 0.01
 
 
@@ -142,7 +176,7 @@ class Network:
 
 
     def run(self, file):
-        self.read_all()
+        #self.read_all()
 
         self.img_open("test_images/" + file)
 
@@ -188,15 +222,19 @@ class Network:
         self.output_layer.weights = self.output_layer.weights - self.learning_rate * self.output_layer.weights_sensitivity
         self.output_layer.bias = self.output_layer.bias - self.learning_rate * self.output_layer.biases_sensitivity
 
-        self.write_all()
+        
 
     
 
-    def full_learning(self):
-        for image in os.listdir("test_images"):
-            self.learning(image)
+    def full_learning(self, epochen = 200):
+        self.read_all()
+        for _ in range(epochen):
+            for image in os.listdir("test_images"):
+                self.learning(image)
+        self.write_all()
 
 n = Network()
-#print(n.run("test_499.png"))
-n.generate_random()
-#n.full_learning()
+#n.read_all()
+#print(n.run("test_493.png"))
+#.generate_random()
+n.full_learning()
