@@ -4,6 +4,8 @@ import math
 import random
 import json
 import os
+import pandas as pd
+import plotly.express as px
 
 def sigmoid(x):
     if x >= 0:
@@ -23,6 +25,36 @@ def relu(x):
 def derev_relu(x):
     return 1 if x > 0 else 0.01
 
+
+def write_json(data, filename):
+    # allow passing string OR dict
+    if isinstance(data, str):
+        data = json.loads(data.replace("'", '"'))
+
+    with open(filename, 'r+') as file:
+        file_data = json.load(file)
+        file_data["time"].update(data)
+        file.seek(0)
+        json.dump(file_data, file, indent=4)
+        file.truncate()
+
+def showGraph():
+    with open('learning.json', 'r') as file:
+        data = json.load(file)
+
+    time = data['time']
+
+    df = pd.DataFrame.from_dict(time, orient='index')
+    df = df.astype(float)
+
+    fig = px.scatter(df,x=df.index, y=abs(df[0]))
+
+    fig = px.scatter(
+        df, x=df.index, y=abs(df[0]), opacity=0.65,
+        trendline="ols", trendline_color_override='red', title='fehler'
+    )
+
+    fig.show()
 
 
 
@@ -207,7 +239,6 @@ class Network:
         self.output_layer.goal = np.array([[goal]])
 
         self.run(file)
-        print(self.output_layer.goal[0,0] - self.output_layer.values[0,0])
 
         self.output_layer.bias_sensitivity()
         self.output_layer.weight_sensitivity(self.hidden_layer)
@@ -226,15 +257,37 @@ class Network:
 
     
 
-    def full_learning(self, epochen = 200):
+    def full_learning(self, epochen = 150):
         self.read_all()
-        for _ in range(epochen):
+
+        file = "learning.json"
+
+        data = {
+            "time": {}
+        }
+        json_str = json.dumps(data, indent=4)
+        with open(file, "w") as f:
+            f.write(json_str)
+
+        fehler = []
+        for i in range(epochen):
             for image in os.listdir("test_images"):
                 self.learning(image)
+
+                fehler.append(self.output_layer.goal[0,0] - self.output_layer.values[0,0])
+
+            data = {}
+            for j in range(len(fehler)):
+                data.update({str(j): fehler[j]})
+            write_json(data, "learning.json")
+            print(i)
+
         self.write_all()
 
 n = Network()
-#n.read_all()
-#print(n.run("test_493.png"))
-#.generate_random()
-n.full_learning()
+n.read_all()
+print(n.run("test_359.png"))
+#n.generate_random()
+#n.full_learning()
+#showGraph()
+print("done")
