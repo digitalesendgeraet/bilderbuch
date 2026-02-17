@@ -5,7 +5,7 @@ import random
 import json
 import os
 import pandas as pd
-import plotly.express as px
+import plotly.express as px         #you need to install module 'statsmodels' (python -m pip install statsmodels) for this to work
 
 def sigmoid(x):
     if x >= 0:
@@ -55,6 +55,7 @@ def showGraph():
     )
 
     fig.show()
+
 
 
 
@@ -247,17 +248,17 @@ class Network:
         self.hidden_layer.bias_sensitivity(use_value_sensitivity=True)
         self.hidden_layer.weight_sensitivity(self.input_layer, use_value_sensitivity=True)
 
-        self.hidden_layer.weights = self.hidden_layer.weights - self.learning_rate * self.hidden_layer.weights_sensitivity
-        self.hidden_layer.bias = self.hidden_layer.bias - self.learning_rate * self.hidden_layer.biases_sensitivity
+        self.hidden_layer.weights = self.hidden_layer.weights - self.learning_rate * self.hidden_layer.weights_sensitivity# + random.uniform(-0.00005, 0.00005)
+        self.hidden_layer.bias = self.hidden_layer.bias - self.learning_rate * self.hidden_layer.biases_sensitivity# + random.uniform(-0.00005, 0.00005)
 
-        self.output_layer.weights = self.output_layer.weights - self.learning_rate * self.output_layer.weights_sensitivity
-        self.output_layer.bias = self.output_layer.bias - self.learning_rate * self.output_layer.biases_sensitivity
+        self.output_layer.weights = self.output_layer.weights - self.learning_rate * self.output_layer.weights_sensitivity# + random.uniform(-0.00005, 0.00005)
+        self.output_layer.bias = self.output_layer.bias - self.learning_rate * self.output_layer.biases_sensitivity# + random.uniform(-0.00005, 0.00005)
 
         
 
     
 
-    def full_learning(self, epochen = 150):
+    def full_learning(self, epochen = 800):
         self.read_all()
 
         file = "learning.json"
@@ -286,8 +287,8 @@ class Network:
 
 n = Network()
 n.read_all()
-print(n.run("test_359.png"))
+#print(n.run("test_264.png"))
 #n.generate_random()
-#n.full_learning()
-#showGraph()
+n.full_learning()
+showGraph()
 print("done")
