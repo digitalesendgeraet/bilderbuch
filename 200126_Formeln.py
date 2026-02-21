@@ -15,10 +15,10 @@ def derev_sigmoid(vector):
     return s * (1-s)
     
 def relu(vector):
-    return np.maximum(0, vector)
+    return np.where(vector > 0, vector, 0.01 * vector)
 
 def derev_relu(vector):
-    return np.where(vector > 0,1,0)
+    return np.where(vector > 0, 1, 0.01)
 
 
 def write_json(data, filename):
@@ -70,80 +70,66 @@ class Layer:
         self.size = size
         self.prev_Size = prev_Size
 
+
+
     def next_layer(self, prev_Layer):
-        self.z = np.matmul(prev_Layer.values, self.weights).sum(axis=(0,1)) + self.bias
+        self.z = np.einsum('ij,nmij->nm', prev_Layer.values, self.weights) + self.bias
 
         if self.size == 1:  # Output layer
             self.values = sigmoid(self.z)
         else:
             self.values = relu(self.z)
 
+
     
-    def weight_sensitivity(self, prev_Layer, use_value_sensitivity=False): #prev_Layer ist layer davor (nichts umgedreht durch backpropagation)
+    def weight_sensitivity(self, prev_Layer): #prev_Layer ist layer davor (nichts umgedreht durch backpropagation)
         
-        self.weights_sensitivity = 
+        dz_nach_dw = prev_Layer.values
 
-        for n in range(len(prev_Layer.values)):
-            for m in range(len(prev_Layer.values[n])):
-                for i in range(len(self.values)):
-                    for j in range(len(self.values[i])):
-                        dz_nach_dw = prev_Layer.values[n,m] 
+        if self.size == 1:
+            da_nach_dz = derev_sigmoid(self.z)
+            #da_nach_dz = 0.5
+            dc_nach_da = 2 * (self.values-self.goal)
+        else:
+            da_nach_dz = derev_relu(self.z)
+            dc_nach_da = self.value_sensitivity
 
-                        if self.size == 1:
-                            #da_nach_dz = derev_sigmoid(self.z[i,j])
-                            da_nach_dz = 0.5
-                        else:
-                            da_nach_dz = derev_relu(self.z[i,j])
+        dc_nach_dz = np.multiply(dc_nach_da, da_nach_dz)
 
-                        if use_value_sensitivity:
-                            dc_nach_da = self.value_sensitivity[i,j]
-                        else:
-                            dc_nach_da = 2 * (self.values[i, j]-self.goal[i, j])
+        self.weights_sensitivity = np.einsum('ij,nm->ijnm', dc_nach_dz, dz_nach_dw)
 
-                        dc_nach_dw = dz_nach_dw * da_nach_dz * dc_nach_da
-                        self.weights_sensitivity[i, j, n, m] =  dc_nach_dw
+
+
     
-    def bias_sensitivity(self, use_value_sensitivity=False):
-        for n in range(len(self.values)):
-            for m in range(len(self.values[n])):
-                dz_nach_db = 1
+    def bias_sensitivity(self):
+        dz_nach_db = 1
 
-                if self.size == 1:
-                    #da_nach_dz = derev_sigmoid(self.z[n, m])
-                    da_nach_dz = 0.5
-                else:
-                    da_nach_dz = derev_relu(self.z[n, m])
+        if self.size == 1:
+            da_nach_dz = derev_sigmoid(self.z)
+            #da_nach_dz = 0.5
+            dc_nach_da = 2 * (self.values-self.goal)
+        else:
+            da_nach_dz = derev_relu(self.z)
+            dc_nach_da = self.value_sensitivity
 
-                if use_value_sensitivity:
-                    dc_nach_da = self.value_sensitivity[n,m]
-                else:
-                    dc_nach_da = 2 * (self.values[n,m]-self.goal[n,m])
+        self.biases_sensitivity = dz_nach_db * np.multiply(dc_nach_da, da_nach_dz)
 
-                dc_nach_db = dz_nach_db * da_nach_dz * dc_nach_da
-                self.biases_sensitivity[n,m] =  dc_nach_db
 
-    def prev_Val_sensitivity(self, prev_Layer, use_value_sensitivity=False):
-        for n in range(len(prev_Layer.values)):
-            for m in range(len(prev_Layer.values[n])):
-                summe = 0
-                for i in range(len(self.values)):
-                    for j in range(len(self.values[i])):
-                        dz_nach_da = self.weights[i,j,n,m]
 
-                        if self.size == 1:
-                            #da_nach_dz = derev_sigmoid(self.z[i,j])
-                            da_nach_dz = 0.5
-                        else:
-                            da_nach_dz = derev_relu(self.z[i,j])
+    def prev_Val_sensitivity(self, prev_Layer):
+        dz_nach_da = self.weights
 
-                        if use_value_sensitivity:
-                            dc_nach_da = self.value_sensitivity[i,j]
-                        else:
-                            dc_nach_da = 2 * (self.values[i,j]-self.goal[i,j])
+        if self.size == 1:
+            da_nach_dz = derev_sigmoid(self.z)
+            #da_nach_dz = 0.5
+            dc_nach_da = 2 * (self.values-self.goal)
+        else:
+            da_nach_dz = derev_relu(self.z)
+            dc_nach_da = self.value_sensitivity
 
-                        summe += dz_nach_da * da_nach_dz * dc_nach_da
-                dc_nach_dw = summe
-                prev_Layer.value_sensitivity[n,m] =  dc_nach_dw
+        dc_nach_dz = np.multiply(dc_nach_da, da_nach_dz)
+
+        prev_Layer.value_sensitivity = np.einsum('ij,ijnm->nm', dc_nach_dz, dz_nach_da)
 
         
 
@@ -155,7 +141,7 @@ class Network:
         self.input_layer =  Layer(16, 1)
         self.hidden_layer = Layer(4, 16)
         self.output_layer = Layer(1, 4)                          # 0-index = True ; 1-index = Flase
-        self.learning_rate = 0.01
+        self.learning_rate = 0.001
 
 
 
@@ -238,8 +224,8 @@ class Network:
         self.output_layer.weight_sensitivity(self.hidden_layer)
         self.output_layer.prev_Val_sensitivity(self.hidden_layer)
 
-        self.hidden_layer.bias_sensitivity(use_value_sensitivity=True)
-        self.hidden_layer.weight_sensitivity(self.input_layer, use_value_sensitivity=True)
+        self.hidden_layer.bias_sensitivity()
+        self.hidden_layer.weight_sensitivity(self.input_layer)
 
         self.hidden_layer.weights = self.hidden_layer.weights - self.learning_rate * self.hidden_layer.weights_sensitivity# + random.uniform(-0.00005, 0.00005)
         self.hidden_layer.bias = self.hidden_layer.bias - self.learning_rate * self.hidden_layer.biases_sensitivity# + random.uniform(-0.00005, 0.00005)
@@ -251,7 +237,7 @@ class Network:
 
     
 
-    def full_learning(self, epochen = 50):
+    def full_learning(self, epochen = 2000):
         self.read_all()
 
         file = "learning.json"
@@ -264,27 +250,31 @@ class Network:
             f.write(json_str)
 
         fehler = []
+
         for i in range(epochen):
-            for image in os.listdir("test_images"):
+            images = os.listdir("test_images")
+            random.shuffle(images)
+            for image in images:
                 self.learning(image)
 
-                fehler.append((self.output_layer.goal[0,0] - self.output_layer.values[0,0]))
-
-            data = {}
-            for j in range(len(fehler)):
-                data.update({str(j): fehler[j]})
-            write_json(data, "learning.json")
+                fehler.append((self.output_layer.goal[0,0] - self.output_layer.values[0,0])**2)
             print(i)
+
+        data = {}
+        for j in range(len(fehler)):
+            data.update({str(j): fehler[j]})
+        write_json(data, "learning.json")
 
         self.write_all()
 
 n = Network()
 n.read_all()
-#print(n.run("test_447.png"))
-#print(n.run("test_353.png"))
+for i in range(0,500, 2):
+    ergebnis = n.run("test_"+str(i)+".png")
+    if ergebnis <= 0.5:
+        print(ergebnis)
+        print(i)
 #n.generate_random()
-n.full_learning()
-showGraph()
+#n.full_learning()
+#showGraph()
 print("done")
-
-#110667   110573
