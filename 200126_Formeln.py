@@ -7,23 +7,18 @@ import os
 import pandas as pd
 import plotly.express as px         #you need to install module 'statsmodels' (python -m pip install statsmodels) for this to work
 
-def sigmoid(x):
-    if x >= 0:
-        z = math.exp(-x)
-        return 1 / (1 + z)
-    else:
-        z = math.exp(x)
-        return z / (1 + z)
+def sigmoid(vector):
+    return 1 / (1+np.exp(-vector))
     
-def derev_sigmoid(x):
-    s = sigmoid(x)
-    return s * (1 - s)
+def derev_sigmoid(vector):
+    s = sigmoid(vector)
+    return s * (1-s)
     
-def relu(x):
-    return x if x > 0 else 0.01 * x
+def relu(vector):
+    return np.maximum(0, vector)
 
-def derev_relu(x):
-    return 1 if x > 0 else 0.01
+def derev_relu(vector):
+    return np.where(vector > 0,1,0)
 
 
 def write_json(data, filename):
@@ -76,20 +71,18 @@ class Layer:
         self.prev_Size = prev_Size
 
     def next_layer(self, prev_Layer):
-        for n in range(len(self.values)):
-            for m in range(len(self.values[n])):
-                sum = 0
-                for i in range(len(prev_Layer.values)):
-                    for j in range(len(prev_Layer.values[i])):
-                        sum += prev_Layer.values[i,j]*self.weights[n,m,i,j]
-                sum += self.bias[n, m]
-                self.z[n,m] = sum
-                if self.size == 1:   # Output layer
-                    self.values[n,m] = sigmoid(sum)
-                else:
-                    self.values[n,m] = relu(sum)
+        self.z = np.matmul(prev_Layer.values, self.weights).sum(axis=(0,1)) + self.bias
+
+        if self.size == 1:  # Output layer
+            self.values = sigmoid(self.z)
+        else:
+            self.values = relu(self.z)
+
     
     def weight_sensitivity(self, prev_Layer, use_value_sensitivity=False): #prev_Layer ist layer davor (nichts umgedreht durch backpropagation)
+        
+        self.weights_sensitivity = 
+
         for n in range(len(prev_Layer.values)):
             for m in range(len(prev_Layer.values[n])):
                 for i in range(len(self.values)):
@@ -258,7 +251,7 @@ class Network:
 
     
 
-    def full_learning(self, epochen = 800):
+    def full_learning(self, epochen = 50):
         self.read_all()
 
         file = "learning.json"
@@ -275,7 +268,7 @@ class Network:
             for image in os.listdir("test_images"):
                 self.learning(image)
 
-                fehler.append(self.output_layer.goal[0,0] - self.output_layer.values[0,0])
+                fehler.append((self.output_layer.goal[0,0] - self.output_layer.values[0,0]))
 
             data = {}
             for j in range(len(fehler)):
@@ -287,8 +280,11 @@ class Network:
 
 n = Network()
 n.read_all()
-#print(n.run("test_264.png"))
+#print(n.run("test_447.png"))
+#print(n.run("test_353.png"))
 #n.generate_random()
 n.full_learning()
 showGraph()
 print("done")
+
+#110667   110573
