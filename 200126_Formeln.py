@@ -237,7 +237,7 @@ class Network:
 
     
 
-    def full_learning(self, epochen = 2000):
+    def full_learning(self, epochen = 200):
         self.read_all()
 
         file = "learning.json"
@@ -268,13 +268,14 @@ class Network:
         self.write_all()
 
 n = Network()
-n.read_all()
-for i in range(0,500, 2):
-    ergebnis = n.run("test_"+str(i)+".png")
-    if ergebnis <= 0.5:
-        print(ergebnis)
-        print(i)
+#n.read_all()
+#for i in range(1,500, 2):
+#     ergebnis = n.run("test_"+str(i)+".png")
+#     if ergebnis >= 0.5:
+#         print(ergebnis)
+#         print(i)
+#print(n.run("test_500.png"))
 #n.generate_random()
 #n.full_learning()
-#showGraph()
+showGraph()
 print("done")
