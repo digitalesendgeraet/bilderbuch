@@ -6,7 +6,7 @@ from PyQt6.QtGui import QPixmap, QKeyEvent
 from PyQt6.QtCore import Qt
 
 
-JSON_PATH = "goals copy.json"
+JSON_PATH = "goals.json"
 IMAGE_FOLDER = "formated_images"
 
 
