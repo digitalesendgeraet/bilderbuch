@@ -73,9 +73,6 @@ class Layer:
 
 
     def next_layer(self, prev_Layer):
-        print(np.size(self.weights))
-        print(np.size(self.values))
-        print(np.size(prev_Layer.values)) #-> prevLayer.values hat falsche größe TODO
         self.z = np.einsum('ij,nmij->nm', prev_Layer.values, self.weights) + self.bias
 
         if self.size == 1:  # Output layer
@@ -152,7 +149,7 @@ class Network:
         bias = [[round(random.uniform(-0.1,0.1), 3) for x in range(self.hidden_layer.size)] for x in range(self.hidden_layer.size)] 
         self.hidden_layer.bias = np.array(bias)  
 
-        weights = [[[[round(random.uniform(-0.1,0.1), 3)  for x in range(self.hidden_layer.prev_Size)] for x in range(self.hidden_layer.prev_Size)] for x in range(self.hidden_layer.size)] for x in range(self.hidden_layer.size)]
+        weights = [[[[round(random.uniform(-0.1, 0.1), 3)  for x in range(self.hidden_layer.prev_Size)] for x in range(self.hidden_layer.prev_Size)] for x in range(self.hidden_layer.size)] for x in range(self.hidden_layer.size)]
         self.hidden_layer.weights = np.array(weights)
 
         bias = [[round(random.uniform(-0.1,0.1), 3)  for x in range(self.output_layer.size)] for x in range(self.output_layer.size)] 
@@ -167,9 +164,7 @@ class Network:
 
     def img_open(self, file):
         data_i = Image.open(file)#.convert("L") #TODO hat mit dem value fehler zutun
-        print(np.size(self.input_layer.values))
-        self.input_layer.values = np.array(data_i) #/ 255.0
-        print(np.size(self.input_layer.values))
+        self.input_layer.values = np.array(data_i) / 255.0
 
 
 
@@ -195,7 +190,7 @@ class Network:
     def run(self, file):
         #self.read_all()
 
-        self.img_open("test_images/" + file)
+        self.img_open("formated_images/" + file)
 
         self.hidden_layer.next_layer(self.input_layer)
         self.output_layer.next_layer(self.hidden_layer)
@@ -242,7 +237,7 @@ class Network:
 
     
 
-    def full_learning(self, epochen = 2000):
+    def full_learning(self, epochen = 1500):
         self.read_all()
 
         file = "learning.json"
@@ -257,13 +252,13 @@ class Network:
         fehler = []
 
         for i in range(epochen):
-            images = os.listdir("test_images")
+            print(i)
+            images = os.listdir("formated_images")
             random.shuffle(images)
             for image in images:
                 self.learning(image)
 
                 fehler.append((self.output_layer.goal[0,0] - self.output_layer.values[0,0])**2)
-            print(i)
 
         data = {}
         for j in range(len(fehler)):
@@ -273,15 +268,27 @@ class Network:
         self.write_all()
 
 n = Network()
-n.generate_random()
+#n.generate_random()
 n.read_all()
-n.full_learning()
+#n.full_learning()
 #print(n.input_layer.bias)
-#for i in range(1,500, 2):
-#     ergebnis = n.run("test_"+str(i)+".png")
-#     if ergebnis >= 0.5:
-#         print(ergebnis)
-#         print(i)
-#print(n.run("test_500.png"))
+
+images = os.listdir("formated_images")
+for image in images:
+    output = n.run(image)
+
+    with open('goals.json', 'r') as goals:
+            data = json.load(goals)
+
+    pictures = data['pictures']
+    goal = pictures[image]["goal"]
+
+    if (goal - output[0,0])**2 > 0.1:
+        print(image)
+        print((goal - output[0,0])**2)
+
+
+#print(round(n.run("test_480.png")[0,0], 5))
+n.read_all()
 #showGraph()
 print("done")
