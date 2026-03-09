@@ -1,0 +1,307 @@
+{
+    "pictures": {
+        "test_0.png": {
+            "goal": 1
+        },
+        "test_1.png": {
+            "goal": -1
+        },
+        "test_2.png": {
+            "goal": 0
+        },
+        "test_3.png": {
+            "goal": 1
+        },
+        "test_4.png": {
+            "goal": 1
+        },
+        "test_5.png": {
+            "goal": 1
+        },
+        "test_6.png": {
+            "goal": 0
+        },
+        "test_7.png": {
+            "goal": 0
+        },
+        "test_8.png": {
+            "goal": -1
+        },
+        "test_9.png": {
+            "goal": 1
+        },
+        "test_10.png": {
+            "goal": 1
+        },
+        "test_11.png": {
+            "goal": -1
+        },
+        "test_12.png": {
+            "goal": 0
+        },
+        "test_13.png": {
+            "goal": -1
+        },
+        "test_14.png": {
+            "goal": 1
+        },
+        "test_15.png": {
+            "goal": -1
+        },
+        "test_16.png": {
+            "goal": 1
+        },
+        "test_17.png": {
+            "goal": 1
+        },
+        "test_18.png": {
+            "goal": -1
+        },
+        "test_19.png": {
+            "goal": 0
+        },
+        "test_20.png": {
+            "goal": 1
+        },
+        "test_21.png": {
+            "goal": 0
+        },
+        "test_22.png": {
+            "goal": -1
+        },
+        "test_23.png": {
+            "goal": 0
+        },
+        "test_24.png": {
+            "goal": 1
+        },
+        "test_25.png": {
+            "goal": 0
+        },
+        "test_26.png": {
+            "goal": 1
+        },
+        "test_27.png": {
+            "goal": 1
+        },
+        "test_28.png": {
+            "goal": 0
+        },
+        "test_29.png": {
+            "goal": 0
+        },
+        "test_30.png": {
+            "goal": -1
+        },
+        "test_31.png": {
+            "goal": 1
+        },
+        "test_32.png": {
+            "goal": 1
+        },
+        "test_33.png": {
+            "goal": -1
+        },
+        "test_34.png": {
+            "goal": 1
+        },
+        "test_35.png": {
+            "goal": 1
+        },
+        "test_36.png": {
+            "goal": -1
+        },
+        "test_37.png": {
+            "goal": 1
+        },
+        "test_38.png": {
+            "goal": -1
+        },
+        "test_39.png": {
+            "goal": 0
+        },
+        "test_40.png": {
+            "goal": 1
+        },
+        "test_41.png": {
+            "goal": 0
+        },
+        "test_42.png": {
+            "goal": 0
+        },
+        "test_43.png": {
+            "goal": -1
+        },
+        "test_44.png": {
+            "goal": 1
+        },
+        "test_45.png": {
+            "goal": 1
+        },
+        "test_46.png": {
+            "goal": 1
+        },
+        "test_47.png": {
+            "goal": 0
+        },
+        "test_48.png": {
+            "goal": 0
+        },
+        "test_49.png": {
+            "goal": 0
+        },
+        "test_50.png": {
+            "goal": 0
+        },
+        "test_51.png": {
+            "goal": 1
+        },
+        "test_52.png": {
+            "goal": 0
+        },
+        "test_53.png": {
+            "goal": 0
+        },
+        "test_54.png": {
+            "goal": -1
+        },
+        "test_55.png": {
+            "goal": 1
+        },
+        "test_56.png": {
+            "goal": 1
+        },
+        "test_57.png": {
+            "goal": 0
+        },
+        "test_58.png": {
+            "goal": 1
+        },
+        "test_59.png": {
+            "goal": 1
+        },
+        "test_60.png": {
+            "goal": 0
+        },
+        "test_61.png": {
+            "goal": 1
+        },
+        "test_62.png": {
+            "goal": 1
+        },
+        "test_63.png": {
+            "goal": 1
+        },
+        "test_64.png": {
+            "goal": 1
+        },
+        "test_65.png": {
+            "goal": 0
+        },
+        "test_66.png": {
+            "goal": 1
+        },
+        "test_67.png": {
+            "goal": 0
+        },
+        "test_68.png": {
+            "goal": 0
+        },
+        "test_69.png": {
+            "goal": 1
+        },
+        "test_70.png": {
+            "goal": 0
+        },
+        "test_71.png": {
+            "goal": 0
+        },
+        "test_72.png": {
+            "goal": -1
+        },
+        "test_73.png": {
+            "goal": 1
+        },
+        "test_74.png": {
+            "goal": -1
+        },
+        "test_75.png": {
+            "goal": 0
+        },
+        "test_76.png": {
+            "goal": -1
+        },
+        "test_77.png": {
+            "goal": 0
+        },
+        "test_78.png": {
+            "goal": 0
+        },
+        "test_79.png": {
+            "goal": -1
+        },
+        "test_80.png": {
+            "goal": 1
+        },
+        "test_81.png": {
+            "goal": 1
+        },
+        "test_82.png": {
+            "goal": 1
+        },
+        "test_83.png": {
+            "goal": 0
+        },
+        "test_84.png": {
+            "goal": 1
+        },
+        "test_85.png": {
+            "goal": 0
+        },
+        "test_86.png": {
+            "goal": 0
+        },
+        "test_87.png": {
+            "goal": 1
+        },
+        "test_88.png": {
+            "goal": 0
+        },
+        "test_89.png": {
+            "goal": 1
+        },
+        "test_90.png": {
+            "goal": 1
+        },
+        "test_91.png": {
+            "goal": 0
+        },
+        "test_92.png": {
+            "goal": -1
+        },
+        "test_93.png": {
+            "goal": 0
+        },
+        "test_94.png": {
+            "goal": 0
+        },
+        "test_95.png": {
+            "goal": 0
+        },
+        "test_96.png": {
+            "goal": 0
+        },
+        "test_97.png": {
+            "goal": 1
+        },
+        "test_98.png": {
+            "goal": 1
+        },
+        "test_99.png": {
+            "goal": 0
+        },
+        "test_100.png": {
+            "goal": 0
+        }
+    }
+}
