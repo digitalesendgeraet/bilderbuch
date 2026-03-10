@@ -25,7 +25,7 @@ json_str = json.dumps(data, indent=4)
 with open(file, "w") as f:
     f.write(json_str)
 
-for i in range(501):
+for i in range(1839):
     file_name = f"test_{i}.png"   # FIX: was a tuple before
 
     if i % 2 == 0:

@@ -73,8 +73,27 @@ def blurr(dir_v, dir_n):
 
         n += 1
 
+def contrast(dir_v,dir_n):
+        n = 0
+        for images in os.listdir(dir_v):
+            img = Image.open(str(dir_v) + "/" + images)
+
+            enhancer = ImageEnhance.Contrast(img)
+            img_high_contrast = enhancer.enhance(1.3)
+            
+            img_high_contrast.save(str(dir_n)+"/" + str(images)[:-4] + "_contrast.png")
+            img.save(str(dir_n)+"/" + str(images))
+
+            n += 1
+
+
 
 def goals(dir):
+    with open('goals.json', 'r') as goals:
+        data = json.load(goals)
+    pictures = data['pictures']
+    data = {}
+
     for images in os.listdir(dir):
         name = str(images)
         n = name.find("_")
@@ -83,26 +102,17 @@ def goals(dir):
             m = name.find("_")
             mainImg = str(images)[:m+1] + ".png"
 
-            with open('goals.json', 'r') as goals:
-                data = json.load(goals)
-
-            pictures = data['pictures']
             goal = pictures[mainImg]["goal"]
 
+            data.update({str(images): {"goal": goal}})
 
-            data = {str(images): {"goal": goal}}
-            write_json(data)
-
-
+    write_json(data)
 
 
-#flip("folder1", "folder2")
-#lighting("folder2", "folder3")
-#rotate("folder3", "folder4")
-#blurr("folder4", "folder5")
-goals("folder5")
 
 
-        
-    
-    
+# flip("formated_images", "folder1")
+# lighting("folder1", "folder2")
+# rotate("folder2", "folder3")
+# contrast("folder3", "folder4")
+goals("folder4")

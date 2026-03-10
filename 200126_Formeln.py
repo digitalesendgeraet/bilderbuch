@@ -139,8 +139,8 @@ class Network:
 
     def __init__(self):
         self.input_layer =  Layer(100, 1)
-        self.hidden_layer = Layer(16, 100)
-        self.output_layer = Layer(1, 16)                          # 0-index = True ; 1-index = Flase
+        self.hidden_layer = Layer(8, 100)
+        self.output_layer = Layer(1, 8)                          # 0-index = True ; 1-index = Flase
         self.learning_rate = 0.001
 
 
@@ -163,7 +163,7 @@ class Network:
 
 
     def img_open(self, file):
-        data_i = Image.open(file)#.convert("L") #TODO hat mit dem value fehler zutun
+        data_i = Image.open(file)
         self.input_layer.values = np.array(data_i) / 255.0
 
 
@@ -237,7 +237,7 @@ class Network:
 
     
 
-    def full_learning(self, epochen = 1500):
+    def full_learning(self, epochen = 3000):
         self.read_all()
 
         file = "learning.json"

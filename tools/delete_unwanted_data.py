@@ -23,7 +23,7 @@ def deletion():
     n=0
     for files in pictures:
         goal = pictures[files]["goal"]
-        if goal==-1 and n > 500:
+        if goal==-1:
             os.remove("formated_images/" + str(files))
         n+=1
     
