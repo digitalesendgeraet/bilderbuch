@@ -16,7 +16,7 @@ def write_json(data, filename="goals.json"):
 
 
 
-def flip(dir_v, dir_n):
+def flip(dir_v, dir_n): #Dafür da damit man viel mehr Trainingsdaten hat, kleine Veränderungen eines Bildes bedeunten für KI komplett neus Bild
     n = 0
     for images in os.listdir(dir_v):
         img = Image.open(str(dir_v) + "/" + images)
@@ -88,7 +88,7 @@ def contrast(dir_v,dir_n):
 
 
 
-def goals(dir):
+def goals(dir): #Erstellen von Goals in der Json Datei für Biler die Gleich sind nur durch die oben programmierten Filter anders aussehen 
     with open('goals.json', 'r') as goals:
         data = json.load(goals)
     pictures = data['pictures']
