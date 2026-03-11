@@ -1,5 +1,7 @@
 import json
 
+#Erzeugen von Goals für erste Testimages (schwarze vierecke) immer noch genutzt um die Grundsturktur für die Goals Datei zu erstellen
+
 def write_json(data, filename="goals.json"):
     # allow passing string OR dict
     if isinstance(data, str):
