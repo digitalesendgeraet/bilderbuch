@@ -1,5 +1,5 @@
 import numpy as np
-
+#Testdatei für Numpy operatioen
 weights = np.array([[[[2,1],[3,4]], [[2,1],[3,4]]], [[[2,1],[3,4]], [[2,1],[3,4]]]])
 values = np.array([[2,1],[3,4]])
 
