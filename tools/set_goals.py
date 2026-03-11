@@ -5,6 +5,10 @@ from PyQt6.QtWidgets import QApplication, QLabel, QWidget
 from PyQt6.QtGui import QPixmap, QKeyEvent
 from PyQt6.QtCore import Qt
 
+# Tool um Goals einfacher zu setzen für die ganzen Bilder, Zeigt Bilder Automatisch an
+# Wenn man 1 klick -> Goal 1 (reflektierende Kugel) + nächstes Bild; 0 -> Goal 0 (keine reflektierende Kugel) + nächstes Bild; u -> Goal -1 (unbracuhbares Bild)
+# Mit Pfeiltasten kann man zurückgehen zu vorherigen Bildern und dann indem man entsprechende Taste Drückt neus Goal setzten; Bilder danach muss man Goals wieder neu setzen
+# In der Json Datei kann man manuell eine 2 schreiben an der Stelle wo man Anfangen möchte zu Labeln, falls man schon etwas gemacht hat, ohen 2 beginn vorne, wenn man aufhöhrt automatisch 2 beim Letzten Bild gesetzt
 
 JSON_PATH = "goals.json"
 IMAGE_FOLDER = "formated_images"
