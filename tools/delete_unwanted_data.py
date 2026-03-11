@@ -15,7 +15,7 @@ def write_json(data, filename="goals.json"):
 
 
 
-def deletion():
+def deletion(): #Alle Bilder aus dem Ortner löschen deren Goal -1 ist (-1 haben wir festgelegt für Bilder die so schlecht sind das sie aktiv das Lernen verschlechtern würden
     with open('goals.json', 'r') as goals:
         data = json.load(goals)
 
