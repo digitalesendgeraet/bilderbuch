@@ -1,6 +1,6 @@
 import numpy as np
 from PIL import Image
-import math
+import time
 import random
 import json
 import os
@@ -201,7 +201,9 @@ class Network:
     
 
 
-    def learning(self, file):
+    def learning(self, file, goalJson):
+        global setUpLearning, runLearning, sensBerechenen, sensApplay
+        startSetup = time.time()
         # Immer Sensitivityes auf Null setzen, da diese nur für 1 anpassen sinnvoll sind
         self.hidden_layer.weights_sensitivity.fill(0)
         self.hidden_layer.biases_sensitivity.fill(0)
@@ -212,15 +214,18 @@ class Network:
         self.output_layer.value_sensitivity.fill(0)
 
         #Einlesen vom Goal
-        with open('goals.json', 'r') as goals:
-            data = json.load(goals)
-
-        pictures = data['pictures']
-        goal = pictures[file]["goal"]
+        
+        goal = goalJson[file]["goal"]
 
         self.output_layer.goal = np.array([[goal]])
+
+        startRun = time.time()
+        setUpLearning += startRun - startSetup
         
         self.run(file)    #Durchlaufen
+
+        startSens = time.time()
+        runLearning += startSens - startRun
 
         #Berechenen wie sehr die Veränderung der Werte eine Veränderung des Fehlers erziehlt
         self.output_layer.bias_sensitivity()
@@ -230,6 +235,9 @@ class Network:
         self.hidden_layer.bias_sensitivity()
         self.hidden_layer.weight_sensitivity(self.input_layer)
 
+        startSensAp = time.time()
+        sensBerechenen +=  startSensAp - startSens
+
         #Anpassen der weights und Biases mit dem Berechneten; hatten mit zusätzlichem Random versucht, war nicht besser
         self.hidden_layer.weights = self.hidden_layer.weights - self.learning_rate * self.hidden_layer.weights_sensitivity# + random.uniform(-0.00005, 0.00005)
         self.hidden_layer.bias = self.hidden_layer.bias - self.learning_rate * self.hidden_layer.biases_sensitivity# + random.uniform(-0.00005, 0.00005)
@@ -237,11 +245,13 @@ class Network:
         self.output_layer.weights = self.output_layer.weights - self.learning_rate * self.output_layer.weights_sensitivity# + random.uniform(-0.00005, 0.00005)
         self.output_layer.bias = self.output_layer.bias - self.learning_rate * self.output_layer.biases_sensitivity# + random.uniform(-0.00005, 0.00005)
 
+        sensApplay += time.time() - startSensAp
+
         
 
     
 
-    def full_learning(self, epochen = 3000):
+    def full_learning(self, epochen = 1):
         self.read_all() #Einlesen der Weights und Biases
 
         #Lernverlauf in Json Datei zwischenspeichern: Json Erstellen
@@ -256,16 +266,31 @@ class Network:
 
         fehler = []    #Fehlerverlauf speichern
 
+        with open('goals.json', 'r') as goals:
+            data = json.load(goals)
+
+        pictures = data['pictures']
+
+        print("Setup Time", time.time()-start)
+
+        fehlerTime = 0
+
         for i in range(epochen):
             print(i)
             images = os.listdir("formated_images")
             random.shuffle(images)                #In jeder Epoche alle unsere Bilder einmal durchgehen, und shuffel, damit wir nicht zyklen erzeugen die das Lernen verschlechtern
             for image in images:
-                self.learning(image)    #Lernen
+                self.learning(image, pictures)    #Lernen
 
+                startFehler = time.time()
                 fehler.append((self.output_layer.goal[0,0] - self.output_layer.values[0,0])**2)    #Fehler für die Json
+                fehlerTime += time.time() - startFehler
 
         #Am Ende einmal Fehlerverlauf in Json speichern für öfteres ansehen
+        
+        print("End Learning", time.time()-start)
+        print("fehler Time", fehlerTime)
+
         data = {}
         for j in range(len(fehler)):
             data.update({str(j): fehler[j]})
@@ -274,30 +299,47 @@ class Network:
         self.write_all()    #Berechnete Gewichte Speichern, damit diese als Trainierte Gewichte genutzt werden können
 
 
+start = time.time()
+
+setUpLearning = 0
+runLearning = 0
+sensBerechenen = 0
+sensApplay = 0
+
 n = Network()
 #n.generate_random()       
 n.read_all()
-#n.full_learning()
+
+
+n.full_learning()
+
+print("End", time.time()-start)
+
 #print(n.input_layer.bias)
 
 #Alle Falsch sortierten Bilder oder unsicher Sortierten nach dem Gelernt wurde bestimmen (um Anzahl zu sehen)
-images = os.listdir("formated_images")
-for image in images:
-    output = n.run(image)
+#images = os.listdir("formated_images")
+#for image in images:
+#    output = n.run(image)
 
-    with open('goals.json', 'r') as goals:
-            data = json.load(goals)
+#    with open('goals.json', 'r') as goals:
+#            data = json.load(goals)
 
-    pictures = data['pictures']
-    goal = pictures[image]["goal"]
+#    pictures = data['pictures']
+#    goal = pictures[image]["goal"]
 
-    if (goal - output[0,0])**2 > 0.1:
-        print(image)
-        print((goal - output[0,0])**2)
+#    if (goal - output[0,0])**2 > 0.1:
+#        print(image)
+#        print((goal - output[0,0])**2)
 
 
 #print(round(n.run("test_480.png")[0,0], 5))        
-n.read_all()
 #showGraph()
 
 print("done")
+
+print("setUpLearning", setUpLearning)
+print("runLearing", runLearning)
+print("sensBerechen", sensBerechenen)
+print("sensApplay", sensApplay)
+
