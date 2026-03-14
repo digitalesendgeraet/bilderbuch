@@ -26,6 +26,10 @@ def relu(vector): # Leaky Relu, damit wert nie Null wird damit keine "toten" Neu
 def derev_relu(vector):
     return np.where(vector > 0, 1, 0.01)
 
+@njit(fastmath=True)
+def apply_update(weights, grad, lr):
+    weights -= lr * grad
+
 
 def write_json(data, filename):
     # allow passing string OR dict
@@ -77,7 +81,7 @@ class Layer:
 
 
     def next_layer(self, prev_Layer):
-        self.z = np.einsum('ij,nmij->nm', prev_Layer.values, self.weights) + self.bias #Rechnung um von einer Layer zur nächsten zu kommen
+        self.z = np.tensordot(prev_Layer.values, self.weights, axes=([0, 1], [2, 3])) + self.bias #Rechnung um von einer Layer zur nächsten zu kommen
 
         if self.size == 1:  # Output layer: Sigmoid statt Railu, damit Fehler besser zwischen 0 und 1 liegt wodurch lerenen und Fehlerberechen besser funktioniert
             self.values = sigmoid(self.z)
@@ -95,7 +99,7 @@ class Layer:
 
 
     def weight_sensitivity(self, prev_Layer): #prev_Layer ist layer davor (nichts umgedreht durch backpropagation)
-        self.weights_sensitivity = np.einsum('ij,nm->ijnm', self.dc_nach_dz, prev_Layer.values)    #dc_nach_dz und dz_nach_dw beschreiben verschiedene Formen für die Weights (da es 4D) (dc_nach_dz ist diese Layer; dz_nach_dw ist prevLayer), deshalb Einsum
+        self.weights_sensitivity = np.tensordot(self.dc_nach_dz, prev_Layer.values, axes=0)    #dc_nach_dz und dz_nach_dw beschreiben verschiedene Formen für die Weights (da es 4D) (dc_nach_dz ist diese Layer; dz_nach_dw ist prevLayer), deshalb Einsum
 
 
     def bias_sensitivity(self):
@@ -103,7 +107,7 @@ class Layer:
 
 
     def prev_Val_sensitivity(self, prev_Layer):    #Berechenen wie sehr die Vorherigen Gewichte den Fehler beeinflussen würden, wichtig fürs Lernen in den vorherigen Layern
-        prev_Layer.value_sensitivity = np.einsum('ij,ijnm->nm', self.dc_nach_dz, self.weights)
+        prev_Layer.value_sensitivity = np.tensordot(self.dc_nach_dz, self.weights, axes=([0, 1], [0, 1]))
 
         
 
@@ -200,12 +204,11 @@ class Network:
         sensBerechenen +=  startSensAp - startSens
 
         #Anpassen der weights und Biases mit dem Berechneten; hatten mit zusätzlichem Random versucht, war nicht besser
-        np.subtract(self.hidden_layer.weights, self.learning_rate * self.hidden_layer.weights_sensitivity, out=self.hidden_layer.weights)
-        np.subtract(self.hidden_layer.bias, self.learning_rate * self.hidden_layer.biases_sensitivity, out=self.hidden_layer.bias)
-
-        np.subtract(self.output_layer.weights, self.learning_rate * self.output_layer.weights_sensitivity, out=self.output_layer.weights)
-        np.subtract(self.output_layer.bias, self.learning_rate * self.output_layer.biases_sensitivity, out=self.output_layer.bias)
-
+        apply_update(self.hidden_layer.weights, self.hidden_layer.weights_sensitivity, self.learning_rate)
+        apply_update(self.hidden_layer.bias, self.hidden_layer.biases_sensitivity, self.learning_rate)
+        
+        apply_update(self.output_layer.weights, self.output_layer.weights_sensitivity, self.learning_rate)
+        apply_update(self.output_layer.bias, self.output_layer.biases_sensitivity, self.learning_rate)
 
         sensApplay += time.time() - startSensAp
 
