@@ -64,16 +64,16 @@ def showGraph():
 
 class Layer:
     def __init__(self, size, prev_Size): #Netzstrukutur: Jede Layer 2D (weil InputLayer (Bild) 2D sein sollte) 
-        self.bias = np.zeros((size, size), dtype=np.float32) #Bias nicht in Weights eingeschlossen, da unsere Informationsquelle dies nicht als möglichkeit genannt hat
-        self.biases_sensitivity = np.zeros((size, size), dtype=np.float32) #Sensitvity Werte: basicly Korrektur, wie sehr verändert eine änderung dieses Wertes das Ergebnis (-> Möglichst günstige Änderung)
-        self.values = np.zeros((size, size), dtype=np.float32)
-        self.value_sensitivity = np.zeros((size, size), dtype=np.float32)
+        self.bias = np.zeros((size*size), dtype=np.float32) #Bias nicht in Weights eingeschlossen, da unsere Informationsquelle dies nicht als möglichkeit genannt hat
+        self.biases_sensitivity = np.zeros((size*size), dtype=np.float32) #Sensitvity Werte: basicly Korrektur, wie sehr verändert eine änderung dieses Wertes das Ergebnis (-> Möglichst günstige Änderung)
+        self.values = np.zeros((size*size), dtype=np.float32)
+        self.value_sensitivity = np.zeros((size*size), dtype=np.float32)
 
-        self.weights = np.zeros((size, size, prev_Size, prev_Size), dtype=np.float32) #Da jede Layer 2D ist die Verbindung zwischen den Layer 4D, Struktur, erst jetzige Layer und darin vorherige Layer
-        self.weights_sensitivity = np.zeros((size, size, prev_Size, prev_Size), dtype=np.float32)
+        self.weights = np.zeros((size*size, prev_Size*prev_Size), dtype=np.float32) #Da jede Layer 2D ist die Verbindung zwischen den Layer 4D, Struktur, erst jetzige Layer und darin vorherige Layer
+        self.weights_sensitivity = np.zeros((size*size, prev_Size*prev_Size), dtype=np.float32)
 
-        self.z = np.zeros((size, size), dtype=np.float32) #beim Durchlauf values ohne Sigmoid bzw. Railu -> für Lernen sinnvoll, da es gebraucht wird und nicht neu berechnet werden muss
-        self.goal = np.zeros((size, size), dtype=np.float32)
+        self.z = np.zeros((size*size), dtype=np.float32) #beim Durchlauf values ohne Sigmoid bzw. Railu -> für Lernen sinnvoll, da es gebraucht wird und nicht neu berechnet werden muss
+        self.goal = np.zeros((size*size), dtype=np.float32)
 
         self.size = size
         self.prev_Size = prev_Size
@@ -81,7 +81,7 @@ class Layer:
 
 
     def next_layer(self, prev_Layer):
-        self.z = np.tensordot(prev_Layer.values, self.weights, axes=([0, 1], [2, 3])) + self.bias #Rechnung um von einer Layer zur nächsten zu kommen
+        self.z = self.weights @ prev_Layer.values + self.bias #Rechnung um von einer Layer zur nächsten zu kommen
 
         if self.size == 1:  # Output layer: Sigmoid statt Railu, damit Fehler besser zwischen 0 und 1 liegt wodurch lerenen und Fehlerberechen besser funktioniert
             self.values = sigmoid(self.z)
@@ -99,7 +99,7 @@ class Layer:
 
 
     def weight_sensitivity(self, prev_Layer): #prev_Layer ist layer davor (nichts umgedreht durch backpropagation)
-        self.weights_sensitivity = np.tensordot(self.dc_nach_dz, prev_Layer.values, axes=0)    #dc_nach_dz und dz_nach_dw beschreiben verschiedene Formen für die Weights (da es 4D) (dc_nach_dz ist diese Layer; dz_nach_dw ist prevLayer), deshalb Einsum
+        self.weights_sensitivity = np.outer(self.dc_nach_dz, prev_Layer.values)    #dc_nach_dz und dz_nach_dw beschreiben verschiedene Formen für die Weights (da es 4D) (dc_nach_dz ist diese Layer; dz_nach_dw ist prevLayer), deshalb Einsum
 
 
     def bias_sensitivity(self):
@@ -107,7 +107,7 @@ class Layer:
 
 
     def prev_Val_sensitivity(self, prev_Layer):    #Berechenen wie sehr die Vorherigen Gewichte den Fehler beeinflussen würden, wichtig fürs Lernen in den vorherigen Layern
-        prev_Layer.value_sensitivity = np.tensordot(self.dc_nach_dz, self.weights, axes=([0, 1], [0, 1]))
+        prev_Layer.value_sensitivity = self.weights.T @ self.dc_nach_dz
 
         
 
@@ -122,17 +122,11 @@ class Network:
 
 
     def generate_random(self): #Generieren von Random Startgewichten und Biasen zum Anfang vom Lernen; Startwerte nah an 0
-        bias = [[round(random.uniform(-0.1,0.1), 3) for x in range(self.hidden_layer.size)] for x in range(self.hidden_layer.size)] 
-        self.hidden_layer.bias = np.array(bias, dtype=np.float32)  
+        self.hidden_layer.bias = np.random.uniform(-0.1,0.1,self.hidden_layer.size **2).astype(np.float32)
+        self.hidden_layer.weights = np.random.uniform(-0.1,0.1,(self.hidden_layer.size **2, self.hidden_layer.prev_Size**2)).astype(np.float32)
 
-        weights = [[[[round(random.uniform(-0.1, 0.1), 3)  for x in range(self.hidden_layer.prev_Size)] for x in range(self.hidden_layer.prev_Size)] for x in range(self.hidden_layer.size)] for x in range(self.hidden_layer.size)]
-        self.hidden_layer.weights = np.array(weights, dtype=np.float32)
-
-        bias = [[round(random.uniform(-0.1,0.1), 3)  for x in range(self.output_layer.size)] for x in range(self.output_layer.size)] 
-        self.output_layer.bias = np.array(bias, dtype=np.float32)  
-
-        weights = [[[[round(random.uniform(-0.1,0.1), 3)  for x in range(self.output_layer.prev_Size)] for x in range(self.output_layer.prev_Size)] for x in range(self.output_layer.size)] for x in range(self.output_layer.size)]
-        self.output_layer.weights = np.array(weights, dtype=np.float32)  
+        self.output_layer.bias = np.random.uniform(-0.1,0.1,self.output_layer.size **2).astype(np.float32)
+        self.output_layer.weights = np.random.uniform(-0.1,0.1,(self.output_layer.size**2, self.output_layer.prev_Size**2)).astype(np.float32)
 
         self.write_all()   
 
@@ -140,7 +134,7 @@ class Network:
 
     def img_open(self, file):
         data_i = Image.open(file)
-        self.input_layer.values = np.array(data_i, dtype=np.float32) / 255.0
+        self.input_layer.values = (np.array(data_i, dtype=np.float32) / 255.0).reshape(-1)
 
 
 
@@ -182,7 +176,7 @@ class Network:
         
         goal = goalJson[file]["goal"]
 
-        self.output_layer.goal = np.array([[goal]], dtype=np.float32)
+        self.output_layer.goal = np.array([goal], dtype=np.float32)
 
         startRun = time.time()
         setUpLearning += startRun - startSetup
@@ -248,7 +242,7 @@ class Network:
                 self.learning(image, pictures)    #Lernen
 
                 startFehler = time.time()
-                fehler.append((self.output_layer.goal[0,0] - self.output_layer.values[0,0])**2)    #Fehler für die Json
+                fehler.append((self.output_layer.goal[0] - self.output_layer.values[0])**2)    #Fehler für die Json
                 fehlerTime += time.time() - startFehler
 
         #Am Ende einmal Fehlerverlauf in Json speichern für öfteres ansehen
