@@ -9,11 +9,11 @@ import plotly.express as px         #you need to install module 'statsmodels' (p
 
 def sigmoid(vector):
     return 1 / (1+np.exp(-vector))
-    
+
 def derev_sigmoid(vector):
     s = sigmoid(vector)
     return s * (1-s)
-    
+
 def relu(vector): # Leaky Relu, damit wert nie Null wird damit keine "toten" Neuronen entstehen
     return np.where(vector > 0, vector, 0.01 * vector)
 
@@ -52,8 +52,6 @@ def showGraph():
     fig.show()
 
 
-
-
 class Layer:
     def __init__(self, size, prev_Size): #Netzstrukutur: Jede Layer 2D (weil InputLayer (Bild) 2D sein sollte) 
         self.bias = np.zeros((size, size)) #Bias nicht in Weights eingeschlossen, da unsere Informationsquelle dies nicht als möglichkeit genannt hat
@@ -77,63 +75,29 @@ class Layer:
 
         if self.size == 1:  # Output layer: Sigmoid statt Railu, damit Fehler besser zwischen 0 und 1 liegt wodurch lerenen und Fehlerberechen besser funktioniert
             self.values = sigmoid(self.z)
+
+            self.da_nach_dz = derev_sigmoid(self.z)
+            self.dc_nach_da = 2 * (self.values-self.goal)
+
         else: # Alle anderen Layers: Relu, da es effizienter ist und schneller lernt
             self.values = relu(self.z)
 
-
-    
-    def weight_sensitivity(self, prev_Layer): #prev_Layer ist layer davor (nichts umgedreht durch backpropagation)
-        #Ableitung in Teile aufgeteilt, damit es übersichtlicher ist
-        dz_nach_dw = prev_Layer.values
-
-        if self.size == 1: # Outputlayer
-            da_nach_dz = derev_sigmoid(self.z)
-            #da_nach_dz = 0.5                                # -> zwischenduch versuch, war nicht besser
-            dc_nach_da = 2 * (self.values-self.goal)        # Fehler
-        else: # vorherige Layers
-            da_nach_dz = derev_relu(self.z)
-            dc_nach_da = self.value_sensitivity             # statt Fehler wird genommen wie sehr eine änderung der aktivierungen den Fehler beeinfulssen würde, da man nicht in outputLayer sondern davor ist
-
-        dc_nach_dz = np.multiply(dc_nach_da, da_nach_dz) # Zusammenrechenen der Ableitungen
-
-        self.weights_sensitivity = np.einsum('ij,nm->ijnm', dc_nach_dz, dz_nach_dw)    #dc_nach_dz und dz_nach_dw beschreiben verschiedene Formen für die Weights (da es 4D) (dc_nach_dz ist diese Layer; dz_nach_dw ist prevLayer), deshalb Einsum
-
-
-
-    
-    def bias_sensitivity(self):
-        dz_nach_db = 1
-
-        if self.size == 1:
-            da_nach_dz = derev_sigmoid(self.z)
-            #da_nach_dz = 0.5
-            dc_nach_da = 2 * (self.values-self.goal)
-        else:
-            da_nach_dz = derev_relu(self.z)
-            dc_nach_da = self.value_sensitivity
-
-        self.biases_sensitivity = dz_nach_db * np.multiply(dc_nach_da, da_nach_dz)
-
-
-
-    def prev_Val_sensitivity(self, prev_Layer):    #Berechenen wie sehr die Vorherigen Gewichte den Fehler beeinflussen würden, wichtig fürs Lernen in den vorherigen Layern
-        dz_nach_da = self.weights
-
-        if self.size == 1:
-            da_nach_dz = derev_sigmoid(self.z)
-            #da_nach_dz = 0.5
-            dc_nach_da = 2 * (self.values-self.goal)
-        else:
-            da_nach_dz = derev_relu(self.z)
-            dc_nach_da = self.value_sensitivity
-
-        dc_nach_dz = np.multiply(dc_nach_da, da_nach_dz)
-
-        prev_Layer.value_sensitivity = np.einsum('ij,ijnm->nm', dc_nach_dz, dz_nach_da)
-
+            self.da_nach_dz = derev_relu(self.z)
         
 
 
+    def weight_sensitivity(self, prev_Layer): #prev_Layer ist layer davor (nichts umgedreht durch backpropagation)
+        self.weights_sensitivity = np.einsum('ij,nm->ijnm', self.dc_nach_dz, prev_Layer.values)  #dc_nach_dz und dz_nach_dw beschreiben verschiedene Formen für die Weights (da es 4D) (dc_nach_dz ist diese Layer; dz_nach_dw ist prevLayer), deshalb Einsum
+
+
+    def bias_sensitivity(self):
+        self.biases_sensitivity = self.dc_nach_dz
+
+
+    def prev_Val_sensitivity(self, prev_Layer):    #Berechenen wie sehr die Vorherigen Gewichte den Fehler beeinflussen würden, wichtig fürs Lernen in den vorherigen Layern
+        prev_Layer.value_sensitivity = np.einsum('ij,ijnm->nm', self.dc_nach_dz, self.weights)
+
+        
 
 class Network:
 
@@ -186,7 +150,6 @@ class Network:
         np.save("hidden_weights.npy", self.hidden_layer.weights)
 
 
-
     def run(self, file): #Einmal Bild vorhersagen
         #self.read_all()
 
@@ -200,21 +163,18 @@ class Network:
     
     
 
-
     def learning(self, file, goalJson):
         global setUpLearning, runLearning, sensBerechenen, sensApplay
         startSetup = time.time()
-        # Immer Sensitivityes auf Null setzen, da diese nur für 1 anpassen sinnvoll sind
+        #Einlesen vom Goal
+
         self.hidden_layer.weights_sensitivity.fill(0)
         self.hidden_layer.biases_sensitivity.fill(0)
         self.hidden_layer.value_sensitivity.fill(0)
 
         self.output_layer.weights_sensitivity.fill(0)
         self.output_layer.biases_sensitivity.fill(0)
-        self.output_layer.value_sensitivity.fill(0)
 
-        #Einlesen vom Goal
-        
         goal = goalJson[file]["goal"]
 
         self.output_layer.goal = np.array([[goal]])
@@ -227,23 +187,32 @@ class Network:
         startSens = time.time()
         runLearning += startSens - startRun
 
-        #Berechenen wie sehr die Veränderung der Werte eine Veränderung des Fehlers erziehlt
+
+    
+        self.output_layer.dc_nach_dz = self.output_layer.dc_nach_da * self.output_layer.da_nach_dz
+        
         self.output_layer.bias_sensitivity()
         self.output_layer.weight_sensitivity(self.hidden_layer)
         self.output_layer.prev_Val_sensitivity(self.hidden_layer)
 
+
+        self.hidden_layer.dc_nach_da = self.hidden_layer.value_sensitivity
+        self.hidden_layer.dc_nach_dz = self.hidden_layer.dc_nach_da * self.hidden_layer.da_nach_dz
+
         self.hidden_layer.bias_sensitivity()
         self.hidden_layer.weight_sensitivity(self.input_layer)
+
+        
 
         startSensAp = time.time()
         sensBerechenen +=  startSensAp - startSens
 
         #Anpassen der weights und Biases mit dem Berechneten; hatten mit zusätzlichem Random versucht, war nicht besser
-        self.hidden_layer.weights = self.hidden_layer.weights - self.learning_rate * self.hidden_layer.weights_sensitivity# + random.uniform(-0.00005, 0.00005)
-        self.hidden_layer.bias = self.hidden_layer.bias - self.learning_rate * self.hidden_layer.biases_sensitivity# + random.uniform(-0.00005, 0.00005)
+        self.hidden_layer.weights -= self.learning_rate * self.hidden_layer.weights_sensitivity# + random.uniform(-0.00005, 0.00005)
+        self.hidden_layer.bias -= self.learning_rate * self.hidden_layer.biases_sensitivity# + random.uniform(-0.00005, 0.00005)
 
-        self.output_layer.weights = self.output_layer.weights - self.learning_rate * self.output_layer.weights_sensitivity# + random.uniform(-0.00005, 0.00005)
-        self.output_layer.bias = self.output_layer.bias - self.learning_rate * self.output_layer.biases_sensitivity# + random.uniform(-0.00005, 0.00005)
+        self.output_layer.weights -= self.learning_rate * self.output_layer.weights_sensitivity# + random.uniform(-0.00005, 0.00005)
+        self.output_layer.bias -= self.learning_rate * self.output_layer.biases_sensitivity# + random.uniform(-0.00005, 0.00005)
 
         sensApplay += time.time() - startSensAp
 
@@ -275,7 +244,7 @@ class Network:
 
         fehlerTime = 0
 
-        for i in range(epochen):
+        for i in range(epochen): 
             print(i)
             images = os.listdir("formated_images")
             random.shuffle(images)                #In jeder Epoche alle unsere Bilder einmal durchgehen, und shuffel, damit wir nicht zyklen erzeugen die das Lernen verschlechtern
@@ -283,7 +252,7 @@ class Network:
                 self.learning(image, pictures)    #Lernen
 
                 startFehler = time.time()
-                fehler.append((self.output_layer.goal[0,0] - self.output_layer.values[0,0])**2)    #Fehler für die Json
+                fehler.append(float(self.output_layer.goal[0,0] - self.output_layer.values[0,0])**2)    #Fehler für die Json
                 fehlerTime += time.time() - startFehler
 
         #Am Ende einmal Fehlerverlauf in Json speichern für öfteres ansehen
@@ -307,7 +276,7 @@ sensBerechenen = 0
 sensApplay = 0
 
 n = Network()
-#n.generate_random()       
+n.generate_random()       
 n.read_all()
 
 
@@ -342,4 +311,3 @@ print("setUpLearning", setUpLearning)
 print("runLearing", runLearning)
 print("sensBerechen", sensBerechenen)
 print("sensApplay", sensApplay)
-
