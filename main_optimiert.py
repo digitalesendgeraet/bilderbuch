@@ -26,7 +26,6 @@ def relu(vector): # Leaky Relu, damit wert nie Null wird damit keine "toten" Neu
 def derev_relu(vector):
     return np.where(vector > 0, 1, 0.01)
 
-@njit(fastmath=True)
 def apply_update(weights, grad, lr):
     weights -= lr * grad
 
@@ -93,9 +92,6 @@ class Layer:
             self.values = relu(self.z)
 
             self.da_nach_dz = derev_relu(self.z)
-            self.dc_nach_da = self.value_sensitivity
-        
-        self.dc_nach_dz = np.multiply(self.dc_nach_da, self.da_nach_dz)
 
 
     def weight_sensitivity(self, prev_Layer): #prev_Layer ist layer davor (nichts umgedreht durch backpropagation)
@@ -107,16 +103,16 @@ class Layer:
 
 
     def prev_Val_sensitivity(self, prev_Layer):    #Berechenen wie sehr die Vorherigen Gewichte den Fehler beeinflussen würden, wichtig fürs Lernen in den vorherigen Layern
-        prev_Layer.value_sensitivity = self.weights.T @ self.dc_nach_dz
+        prev_Layer.value_sensitivity += self.weights.T @ self.dc_nach_dz
 
         
 
 class Network:
 
     def __init__(self):
-        self.input_layer =  Layer(100, 1)                        #100 x 100 Bild, (1 nur als Füllerwert)
-        self.hidden_layer = Layer(8, 100)                        # eine Hiddenlayer 8 x 8
-        self.output_layer = Layer(1, 8)                          # 1x1 Outputlayer: 1 -> reflektirende Kugel; 0 -> keine reflektirende Kugel
+        self.input_layer =  Layer(16, 1)                        #100 x 100 Bild, (1 nur als Füllerwert)
+        self.hidden_layer = Layer(4, 16)                        # eine Hiddenlayer 8 x 8
+        self.output_layer = Layer(1, 4)                          # 1x1 Outputlayer: 1 -> reflektirende Kugel; 0 -> keine reflektirende Kugel
         self.learning_rate = 0.001                               # sehr geringe Lernrate, wegen langem lernen
 
 
@@ -133,7 +129,7 @@ class Network:
 
 
     def img_open(self, file):
-        data_i = Image.open(file)
+        data_i = Image.open(file).convert("L")  
         self.input_layer.values = (np.array(data_i, dtype=np.float32) / 255.0).reshape(-1)
 
 
@@ -159,7 +155,7 @@ class Network:
     def run(self, file): #Einmal Bild vorhersagen
         #self.read_all()
 
-        self.img_open("formated_images/" + file)
+        self.img_open("test_images/" + file)
 
         #Durch Layers durchgehen
         self.hidden_layer.next_layer(self.input_layer)
@@ -173,6 +169,13 @@ class Network:
         global setUpLearning, runLearning, sensBerechenen, sensApplay
         startSetup = time.time()
         #Einlesen vom Goal
+        self.hidden_layer.weights_sensitivity.fill(0)
+        self.hidden_layer.biases_sensitivity.fill(0)
+        self.hidden_layer.value_sensitivity.fill(0)
+
+        self.output_layer.weights_sensitivity.fill(0)
+        self.output_layer.biases_sensitivity.fill(0)
+        self.output_layer.value_sensitivity.fill(0)
         
         goal = goalJson[file]["goal"]
 
@@ -187,9 +190,14 @@ class Network:
         runLearning += startSens - startRun
 
         #Berechenen wie sehr die Veränderung der Werte eine Veränderung des Fehlers erziehlt
+        self.output_layer.dc_nach_dz = np.multiply(self.output_layer.dc_nach_da, self.output_layer.da_nach_dz)
+
         self.output_layer.bias_sensitivity()
         self.output_layer.weight_sensitivity(self.hidden_layer)
         self.output_layer.prev_Val_sensitivity(self.hidden_layer)
+
+        self.hidden_layer.dc_nach_da = self.hidden_layer.value_sensitivity
+        self.hidden_layer.dc_nach_dz = np.multiply(self.hidden_layer.dc_nach_da, self.hidden_layer.da_nach_dz)
 
         self.hidden_layer.bias_sensitivity()
         self.hidden_layer.weight_sensitivity(self.input_layer)
@@ -210,7 +218,7 @@ class Network:
 
     
 
-    def full_learning(self, epochen = 1):
+    def full_learning(self, epochen = 3000):
         self.read_all() #Einlesen der Weights und Biases
 
         #Lernverlauf in Json Datei zwischenspeichern: Json Erstellen
@@ -225,7 +233,7 @@ class Network:
 
         fehler = []    #Fehlerverlauf speichern
 
-        with open('goals.json', 'r') as goals:
+        with open('goalsTest.json', 'r') as goals:
             data = json.load(goals)
 
         pictures = data['pictures']
@@ -236,13 +244,13 @@ class Network:
 
         for i in range(epochen):
             print(i)
-            images = os.listdir("formated_images")
+            images = os.listdir("test_images")
             random.shuffle(images)                #In jeder Epoche alle unsere Bilder einmal durchgehen, und shuffel, damit wir nicht zyklen erzeugen die das Lernen verschlechtern
             for image in images:
                 self.learning(image, pictures)    #Lernen
 
                 startFehler = time.time()
-                fehler.append((self.output_layer.goal[0] - self.output_layer.values[0])**2)    #Fehler für die Json
+                fehler.append(float(self.output_layer.goal[0] - self.output_layer.values[0])**2)    #Fehler für die Json
                 fehlerTime += time.time() - startFehler
 
         #Am Ende einmal Fehlerverlauf in Json speichern für öfteres ansehen
@@ -266,7 +274,7 @@ sensBerechenen = 0
 sensApplay = 0
 
 n = Network()
-#n.generate_random()       
+n.generate_random()       
 n.read_all()
 
 
@@ -277,23 +285,23 @@ print("End", time.time()-start)
 #print(n.input_layer.bias)
 
 #Alle Falsch sortierten Bilder oder unsicher Sortierten nach dem Gelernt wurde bestimmen (um Anzahl zu sehen)
-#images = os.listdir("formated_images")
-#for image in images:
-#    output = n.run(image)
+images = os.listdir("test_images")
+for image in images:
+    output = n.run(image)
 
-#    with open('goals.json', 'r') as goals:
-#            data = json.load(goals)
+    with open('goalsTest.json', 'r') as goals:
+            data = json.load(goals)
 
-#    pictures = data['pictures']
-#    goal = pictures[image]["goal"]
+    pictures = data['pictures']
+    goal = pictures[image]["goal"]
 
-#    if (goal - output[0,0])**2 > 0.1:
-#        print(image)
-#        print((goal - output[0,0])**2)
+    if (goal - output[0])**2 > 0.1:
+        print(image)
+        print((goal - output[0])**2)
 
 
-#print(round(n.run("test_480.png")[0,0], 5))        
-#showGraph()
+#print(round(n.run("test_480.png")[0], 5))        
+showGraph()
 
 print("done")
 
